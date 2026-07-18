@@ -1,7 +1,7 @@
 {
  "commentary": {
   "daily": {
-   "generated": "2026-07-18T17:35:58+00:00",
+   "generated": "2026-07-18T17:54:26+00:00",
    "items": [
     {
      "change_pct": -10.14,
@@ -122,7 +122,13 @@
   ]
  },
  "errors": {
-  "daily": [],
+  "daily": [
+   {
+    "message": "['Zalando', 'Zara', 'H&M', 'Sneaker', 'Abendkleid']: The request failed: Google returned a response with code 429",
+    "source": "google_trends",
+    "time": "2026-07-18T17:54:26+00:00"
+   }
+  ],
   "monthly": [
    {
     "message": "Secrets GENESIS_USER/GENESIS_PASS nicht gesetzt - uebersprungen",
@@ -194,7 +200,7 @@
  "meta": {
   "project": "Retail KPI Dashboard",
   "updated": {
-   "daily": "2026-07-18T17:33:33+00:00",
+   "daily": "2026-07-18T17:54:26+00:00",
    "hystreet_manual": "2026-07-18T17:35:58+00:00",
    "monthly": "2026-07-18T16:39:35+00:00",
    "quarterly": "2026-07-18T16:42:08+00:00",
