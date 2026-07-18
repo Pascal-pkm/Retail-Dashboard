@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retail-KPI-Dashboard – Mode &amp; Einzelhandel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--blue:#1a3c6e;--bg:#f5f6f8;--card:#fff;--muted:#6b7280;}
+  *{box-sizing:border-box;margin:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:#1f2937}
+  header{background:var(--blue);color:#fff;padding:22px 28px}
+  header h1{font-size:22px;font-weight:600}
+  header p{opacity:.85;font-size:13px;margin-top:4px}
+  nav{display:flex;gap:8px;padding:14px 28px;background:#fff;border-bottom:1px solid #e5e7eb;flex-wrap:wrap}
+  nav button{border:1px solid #d1d5db;background:#fff;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:14px}
+  nav button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  main{padding:20px 28px;max-width:1200px;margin:auto}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .comments{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:18px}
+  .comments h2{font-size:15px;margin-bottom:8px;color:var(--blue)}
+  .comments li{margin:4px 0 4px 18px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px}
+  .card h3{font-size:14px;font-weight:600;margin-bottom:2px}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin:4px 4px 8px 0}
+  .badge.standort{background:#dcfce7;color:#166534}
+  .badge.konzern{background:#fee2e2;color:#991b1b}
+  .badge.branche{background:#dbeafe;color:#1e40af}
+  .kpi-val{font-size:20px;font-weight:700}
+  .kpi-chg{font-size:13px;margin-left:8px}
+  .up{color:#15803d}.down{color:#b91c1c}
+  .src{font-size:11px;color:var(--muted);margin-top:8px}
+  canvas{margin-top:6px}
+  .ir-list a{color:var(--blue)}
+  .errors{margin-top:22px;font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  footer{padding:24px 28px;font-size:12px;color:var(--muted);max-width:1200px;margin:auto}
+  .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:13px;color:#7c2d12;margin-bottom:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Retail-KPI-Dashboard – Mode &amp; Einzelhandel</h1>
+  <p>Öffentliche Branchen-Kennzahlen · automatisch aktualisiert via GitHub Actions</p>
+</header>
+<nav id="tabs"></nav>
+<main>
+  <div class="meta" id="meta"></div>
+  <div class="note"><strong>Hinweis zur Datenebene:</strong> Kennzahlen sind je Karte gekennzeichnet als
+    <span class="badge standort">Standortebene</span>
+    <span class="badge konzern">Konzernebene</span>
+    <span class="badge branche">Branche/Gesamtmarkt</span>.
+    Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort sind <em>nicht öffentlich verfügbar</em>;
+    die nächste Annäherung sind konzernweite Quartalskennzahlen (z.&nbsp;B. AOV) aus IR-Berichten.</div>
+  <div class="comments" id="comments" hidden></div>
+  <div class="grid" id="grid"></div>
+  <div id="ir"></div>
+  <div class="errors" id="errors" hidden></div>
+</main>
+<footer id="footer"></footer>
+
+<script>
+const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
+const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt"};
+let DATA = null, active = "daily", charts = [];
+
+const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+function render(){
+  charts.forEach(c=>c.destroy()); charts=[];
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.f===active));
+  const upd = DATA.meta?.updated?.[active];
+  document.getElementById("meta").textContent = upd ? `Letzte Aktualisierung (${active}): ${new Date(upd).toLocaleString("de-DE")}` : "Noch kein Datenlauf für diese Frequenz.";
+
+  // Kommentierung
+  const cbox = document.getElementById("comments");
+  const items = DATA.commentary?.[active]?.items || [];
+  cbox.hidden = !items.length;
+  cbox.innerHTML = "<h2>Automatische Kommentierung</h2><ul>" + items.map(i=>`<li>${i.text}</li>`).join("") + "</ul>";
+
+  // Serien
+  const grid = document.getElementById("grid"); grid.innerHTML="";
+  const series = Object.entries(DATA.series||{}).filter(([,s])=>s.frequency===active && (s.points||[]).length);
+  if(!series.length) grid.innerHTML = `<div class="empty">Noch keine Daten – der erste Cron-Lauf füllt dieses Panel.</div>`;
+  series.sort((a,b)=>a[1].label.localeCompare(b[1].label,"de"));
+  for(const [sid,s] of series){
+    const pts=s.points, [d,v]=pts[pts.length-1];
+    let chg=null; if(pts.length>1 && pts[pts.length-2][1]) chg=(v-pts[pts.length-2][1])/Math.abs(pts[pts.length-2][1])*100;
+    const card=document.createElement("div"); card.className="card";
+    card.innerHTML = `<h3>${s.label}</h3>
+      <span class="badge ${s.scope}">${SCOPE[s.scope]||s.scope||""}</span>
+      <div><span class="kpi-val">${fmt(v, v>1000?0:2)}</span>
+        <span style="font-size:12px;color:var(--muted)">${s.unit||""}</span>
+        ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} %</span>`:""}
+      </div>
+      <canvas height="110"></canvas>
+      <div class="src">Stand: ${d} · Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</div>`;
+    grid.appendChild(card);
+    const show = pts.slice(-60);
+    charts.push(new Chart(card.querySelector("canvas"),{
+      type:"line",
+      data:{labels:show.map(p=>p[0]),datasets:[{data:show.map(p=>p[1]),borderColor:"#1a3c6e",backgroundColor:"rgba(26,60,110,.08)",fill:true,pointRadius:0,tension:.25,borderWidth:2}]},
+      options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:6,font:{size:10}}},y:{ticks:{font:{size:10}}}},animation:false}
+    }));
+  }
+
+  // IR-Berichte (nur Quartal)
+  const ir=document.getElementById("ir"); ir.innerHTML="";
+  if(active==="quarterly" && DATA.ir_reports && Object.keys(DATA.ir_reports).length){
+    ir.innerHTML = `<div class="comments ir-list" style="margin-top:18px"><h2>Quartalsberichte (Investor Relations, Konzernebene)</h2><ul>`+
+      Object.values(DATA.ir_reports).map(r=>`<li><a href="${r.report_url}" target="_blank" rel="noopener">${r.name} – ${r.quarter||""}</a> <small style="color:var(--muted)">(geprüft: ${(r.checked||"").slice(0,10)})</small></li>`).join("")+`</ul></div>`;
+  }
+
+  // Fehler
+  const errs = DATA.errors?.[active]||[];
+  const ebox=document.getElementById("errors");
+  ebox.hidden=!errs.length;
+  ebox.innerHTML = "<strong>Hinweise des letzten Laufs:</strong><br>"+errs.map(e=>`${e.source}: ${e.message}`).join("<br>");
+}
+
+function init(){
+  const nav=document.getElementById("tabs");
+  for(const [f,label] of FREQS){
+    const b=document.createElement("button"); b.textContent=label; b.dataset.f=f;
+    b.onclick=()=>{active=f;render();};
+    nav.appendChild(b);
+  }
+  document.getElementById("footer").innerHTML =
+    `Quellen u.&nbsp;a.: Statistisches Bundesamt (Destatis) – Datenlizenz Deutschland – Namensnennung – 2.0
+     (<a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>) · Eurostat · Google Trends ·
+     Yahoo Finance · Investor-Relations-Seiten der Unternehmen · ggf. hystreet.com (mit Genehmigung).
+     Dieses Dashboard dient der nicht-kommerziellen Brancheninformation; alle Angaben ohne Gewähr.`;
+  fetch("data.json").then(r=>r.json()).then(d=>{DATA=d;render();})
+    .catch(()=>{document.getElementById("grid").innerHTML='<div class="empty">data.json konnte nicht geladen werden.</div>';});
+}
+init();
+</script>
+</body>
+</html>

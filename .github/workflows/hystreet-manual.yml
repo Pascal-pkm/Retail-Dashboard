@@ -1,0 +1,50 @@
+name: Hystreet manuell (Passantenfrequenzen)
+
+# BEWUSST KEIN "schedule:" - dieser Workflow läuft ausschließlich, wenn du ihn
+# manuell über "Run workflow" (Actions-Tab) anstößt. Hintergrund in COMPLIANCE.md:
+# die hystreet-AGB stehen einem automatisierten Dauerbetrieb entgegen; die
+# Entscheidung, wann/ob abgefragt wird, bleibt dadurch bei dir.
+on:
+  workflow_dispatch:
+    inputs:
+      newsletter:
+        description: "Nach dem Abruf auch den (privaten) Newsletter versenden?"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Hystreet-Daten abrufen
+        env:
+          HYSTREET_API_KEY: ${{ secrets.HYSTREET_API_KEY }}
+        run: python scripts/run_hystreet.py
+
+      - name: data.json committen
+        run: |
+          git config user.name "kpi-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data.json
+          git diff --cached --quiet || git commit -m "Hystreet-Update (manuell) $(date -u +%F)"
+          git push
+
+      - name: Newsletter versenden (privat, nur an dich)
+        if: ${{ inputs.newsletter && vars.NEWSLETTER_ENABLED == 'true' }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NEWSLETTER_FROM: ${{ vars.NEWSLETTER_FROM }}
+          NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
+        run: python scripts/newsletter.py daily
