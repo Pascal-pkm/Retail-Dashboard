@@ -123,7 +123,7 @@ const GT_PRESETS = [["7d","7 Tage"],["30d","30 Tage"],["90d","90 Tage"],["1y","1
 const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
 
 let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
-let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null;
+let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
 let cardZoom = {}; // sid -> {from, to} (Datumsstrings), fuer Klick-Zoom auf den Standard-Karten
 
 const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -417,6 +417,13 @@ function renderGtFilterbar(){
 function renderGtrends(){
   const all = gtSeriesList();
   if(gtChecked === null){ gtChecked = new Set(all.map(([sid])=>sid)); }
+  if(!gtRangeInit){
+    // Default-Ansicht: letzte 90 Tage statt der kompletten (ggf. mehrjaehrigen) Historie -
+    // sonst ist beim ersten Laden sofort alles auf einmal geladen und einzelne Tages-/
+    // Wochenschwankungen sind visuell kaum zu erkennen. Ueber "Alles" jederzeit erweiterbar.
+    gtRangeFrom = addDaysISO(todayISO(), -90);
+    gtRangeInit = true;
+  }
 
   renderGtFilterbar();
 
@@ -437,7 +444,8 @@ function renderGtrends(){
     idxCard.innerHTML = `<h3>Google-Trends-Index (${gtChecked.size} von ${all.length} Suchbegriffen)</h3>
       <div><span class="kpi-val">${fmt(v,1)}</span>
         <span style="font-size:12px;color:var(--muted)">Index 0–100</span>
-        ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`:""}
+        ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`
+          :idxAgg.length<2?`<span class="kpi-chg" style="color:var(--muted)">Nur 1 Datenpunkt im gewählten Zeitraum – Zeitraum vergrößern für einen Verlauf</span>`:""}
       </div>
       <canvas height="140"></canvas>
       <div class="hint">Stand: ${d} · Klick auf einen Punkt springt eine Frequenzstufe tiefer (Quartal→Monat→Woche→Tag) und zoomt auf diesen Zeitraum.</div>`;
@@ -488,7 +496,8 @@ function renderGtrends(){
       card.innerHTML = `<h3>${s.keyword||s.label}</h3>
         <div><span class="kpi-val">${fmt(v,1)}</span>
           <span style="font-size:12px;color:var(--muted)">Index 0–100</span>
-          ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`:""}
+          ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`
+            :agg.length<2?`<span class="kpi-chg" style="color:var(--muted)">Nur 1 Datenpunkt im Zeitraum</span>`:""}
         </div>
         <canvas height="110"></canvas>
         <div class="src">Stand: ${d}${src?` · Quelle: ${src}`:""}</div>`;
