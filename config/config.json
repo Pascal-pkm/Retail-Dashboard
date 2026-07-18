@@ -2,9 +2,9 @@
   "dashboard_url": "https://Pascal-pkm.github.io/Retail-Dashboard/",
 
   "hystreet": {
-    "enabled": true,
-    "_hinweis": "NICHT aktivieren, bevor die Freigabe von hystreet vorliegt bzw. das Restrisiko bewusst akzeptiert ist - siehe COMPLIANCE.md. Aktivierung: enabled=true UND Secret HYSTREET_API_KEY im Repo. Danach nur ueber den Workflow 'Hystreet manuell' bzw. scripts/run_hystreet.py abrufen, NIE per Cron.",
-    "_zugriffs_hinweis": "WICHTIG: Laut Hystreet-Profil (Stand 2026-07) gilt der API-Token nur beispielhaft fuer den Standort Limburg (ID 148) oder explizit vereinbarte Standorte - NICHT fuer alle 379 Standorte, die auf der Website sichtbar sind. Deshalb aktuell 404 bei den 10-Staedte-IDs. location_ids ist testweise auf Limburg gesetzt; die volle Liste liegt unveraendert in target_location_ids_10_staedte und kann nach Rueckmeldung von hystreet (Kontaktformular im Profil) wieder eingesetzt werden.",
+    "enabled": false,
+    "_hinweis": "PAUSIERT (Stand 2026-07): Auf Wunsch vorerst kein Hystreet-Einsatz. NICHT aktivieren, bevor die Freigabe von hystreet vorliegt bzw. das Restrisiko bewusst akzeptiert ist - siehe COMPLIANCE.md. Aktivierung: enabled=true UND Secret HYSTREET_API_KEY im Repo. Danach nur ueber den Workflow 'Hystreet manuell' bzw. scripts/run_hystreet.py abrufen, NIE per Cron.",
+    "_zugriffs_hinweis": "Laut Hystreet-Profil gilt der API-Token nur beispielhaft fuer den Standort Limburg (ID 148) oder explizit vereinbarte Standorte - NICHT fuer alle 379 Standorte, die auf der Website sichtbar sind. location_ids bleibt auf den bestaetigt funktionierenden Test-Standort Limburg gesetzt, damit ein versehentliches Reaktivieren nicht sofort 49 Fehler produziert. Die volle Liste liegt unveraendert in target_location_ids_10_staedte und kann nach Rueckmeldung von hystreet (Kontaktformular im Profil) wieder eingesetzt werden.",
     "location_ids": [148],
     "target_location_ids_10_staedte": [
       750, 539, 540, 94, 97, 754, 340, 339, 338, 363, 336,
@@ -61,7 +61,7 @@
       "tile_1667983271066": "Stimmungsindikatoren Konsum"
     },
     "topic_series": {
-      "passantenfrequenzindex": "Passantenfrequenzindex Innenstädte (hystreet via Destatis)",
+      "passantenfrequenzindex": "Passantenfrequenzindex Innenstädte, bundesweit (Destatis EXSTAT, Untersuchung zum 31.12.2025 eingestellt - Reihe endet 01/2026, keine neuen Werte mehr)",
       "gfk_konsumklima": "GfK/NIM-Konsumklima (Trend)",
       "hde_konsumbarometer": "HDE-Konsumbarometer (Trend)"
     },
