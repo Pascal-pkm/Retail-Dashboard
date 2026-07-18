@@ -86,9 +86,14 @@
   },
 
   "google_trends": {
-    "keywords": ["Zalando", "Zara", "H&M", "Sneaker", "Abendkleid"],
     "geo": "DE",
-    "timeframe": "today 3-m"
+    "timeframe": "today 3-m",
+    "_hinweis": "keyword_groups statt einfacher Liste, damit der Google-Trends-Tab im Dashboard nach Gruppe filtern/gruppieren kann. Pro Gruppe frei erweiterbar; die pytrends-Anfrage batcht ueber alle Gruppen hinweg in 5er-Bloecken (API-Limit), die Gruppen-Zuordnung bleibt pro Keyword erhalten.",
+    "keyword_groups": {
+      "handel": {"label": "Online-Handel", "terms": ["Zalando", "Zara", "H&M"]},
+      "marken": {"label": "Modemarken (Midprice)", "terms": ["camel active", "PME Legend", "Marco Polo", "Strellson", "Windsor", "Gerry Weber", "s.Oliver", "Tom Tailor"]},
+      "kategorien": {"label": "Artikel-Oberkategorien", "terms": ["Jacke", "Hose", "T-Shirt", "Kleid", "Pullover", "Mantel", "Rock", "Sneaker", "Abendkleid"]}
+    }
   },
 
   "stocks": {

@@ -45,6 +45,18 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
   .legend span.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
   .leaflet-popup-content{font-size:13px;line-height:1.5}
+  #gtrendsview{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-top:4px}
+  .subnav{display:flex;gap:6px;margin:10px 0 16px}
+  .subnav button{border:1px solid #d1d5db;background:#fff;padding:5px 14px;border-radius:14px;cursor:pointer;font-size:12px;color:#374151}
+  .subnav button.active{background:#1a3c6e;color:#fff;border-color:#1a3c6e}
+  .gt-index{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:16px 18px;margin-bottom:18px}
+  .gt-index h3{font-size:14px;color:#5b21b6;margin-bottom:6px}
+  .gt-groups{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .gt-group{border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px}
+  .gt-group-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  .gt-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
+  .gt-checks label{font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer}
+  .gt-off{opacity:.45}
 </style>
 </head>
 <body>
@@ -74,6 +86,15 @@
     <div id="map"></div>
     <div class="legend" id="mapLegend"></div>
   </div>
+  <div id="gtrendsview" hidden>
+    <h2 style="font-size:15px;color:var(--blue)">Google Trends – Suchinteresse Mode &amp; Einzelhandel</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">Rohdaten sind täglich; die Ansicht unten aggregiert (Durchschnitt) auf die gewählte Frequenz.
+      Abweichung, Graphen und der Gesamt-Index passen sich automatisch an – auch wenn du unten Suchbegriffe abwählst.</p>
+    <div class="subnav" id="gtSubnav"></div>
+    <div class="gt-index" id="gtIndexCard"></div>
+    <div class="gt-groups" id="gtGroups"></div>
+    <div class="grid" id="gtGrid"></div>
+  </div>
 </main>
 <footer id="footer"></footer>
 
@@ -82,7 +103,9 @@ const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatl
 const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt", region:"Regional-Index (Radverkehr-Proxy)"};
 const REGION_COLOR = {bw:"#1a3c6e", hamburg:"#b91c1c", leipzig:"#15803d", muenchen:"#c2410c", nrw_muenster:"#7c3aed"};
 const REGION_LABEL = {bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)"};
+const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
 let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
+let gtFreq = "daily", gtChecked = null;
 
 const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
 
@@ -91,14 +114,22 @@ function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.f===active));
 
   const isMap = active === "map";
+  const isGt = active === "gtrends";
   document.getElementById("mapview").hidden = !isMap;
-  document.getElementById("grid").hidden = isMap;
-  document.getElementById("comments").hidden = isMap || !(DATA.commentary?.[active]?.items || []).length;
-  document.getElementById("ir").hidden = isMap;
-  document.getElementById("errors").hidden = isMap || !(DATA.errors?.[active]||[]).length;
+  document.getElementById("gtrendsview").hidden = !isGt;
+  document.getElementById("grid").hidden = isMap || isGt;
+  document.getElementById("comments").hidden = isMap || isGt || !(DATA.commentary?.[active]?.items || []).length;
+  document.getElementById("ir").hidden = isMap || isGt;
+  document.getElementById("errors").hidden = isMap || isGt || !(DATA.errors?.[active]||[]).length;
   if(isMap){
     document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.radverkehr_stations||{}).length} · Datenstand je Region siehe Popup`;
     renderMap();
+    return;
+  }
+  if(isGt){
+    const upd = DATA.meta?.updated?.daily;
+    document.getElementById("meta").textContent = upd ? `Letzte Aktualisierung (Rohdaten täglich): ${new Date(upd).toLocaleString("de-DE")}` : "Noch kein Datenlauf.";
+    renderGtrends();
     return;
   }
 
@@ -113,7 +144,7 @@ function render(){
 
   // Serien
   const grid = document.getElementById("grid"); grid.innerHTML="";
-  const series = Object.entries(DATA.series||{}).filter(([,s])=>s.frequency===active && (s.points||[]).length);
+  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_"));
   if(!series.length) grid.innerHTML = `<div class="empty">Noch keine Daten – der erste Cron-Lauf füllt dieses Panel.</div>`;
   series.sort((a,b)=>a[1].label.localeCompare(b[1].label,"de"));
   for(const [sid,s] of series){
@@ -186,6 +217,146 @@ function renderMap(){
     `<span><span class="dot" style="background:${REGION_COLOR[k]}"></span>${label}</span>`).join("");
 }
 
+function gtBucketKey(dateStr, freq){
+  if(freq === "daily") return dateStr;
+  const d = new Date(dateStr+"T00:00:00Z");
+  if(freq === "weekly"){
+    const dow = (d.getUTCDay()+6)%7; // 0=Montag
+    const monday = new Date(d); monday.setUTCDate(d.getUTCDate()-dow);
+    return monday.toISOString().slice(0,10);
+  }
+  if(freq === "monthly") return dateStr.slice(0,7)+"-01";
+  if(freq === "quarterly"){
+    const y = d.getUTCFullYear(), q = Math.floor(d.getUTCMonth()/3)+1;
+    return `${y}-Q${q}`;
+  }
+  return dateStr;
+}
+
+function gtAggregate(points, freq){
+  if(freq === "daily") return points;
+  const buckets = new Map();
+  for(const [d,v] of points){
+    const key = gtBucketKey(d, freq);
+    if(!buckets.has(key)) buckets.set(key, {sum:0, count:0});
+    const b = buckets.get(key); b.sum += v; b.count++;
+  }
+  return [...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,b])=>[k, b.sum/b.count]);
+}
+
+function gtSeriesList(){
+  return Object.entries(DATA.series||{}).filter(([sid,s])=>sid.startsWith("gtrends_") && (s.points||[]).length);
+}
+
+function gtCompositeDaily(checkedSids){
+  const byDate = new Map();
+  for(const [sid,s] of gtSeriesList()){
+    if(!checkedSids.has(sid)) continue;
+    for(const [d,v] of s.points){
+      if(!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d).push(v);
+    }
+  }
+  return [...byDate.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([d,vals])=>[d, vals.reduce((a,b)=>a+b,0)/vals.length]);
+}
+
+function gtChangePct(aggPts){
+  if(aggPts.length < 2) return null;
+  const prev = aggPts[aggPts.length-2][1], cur = aggPts[aggPts.length-1][1];
+  if(!prev) return null;
+  return (cur-prev)/Math.abs(prev)*100;
+}
+
+function gtCardHtml(label, aggPts, sourceHtml){
+  if(!aggPts.length) return `<div class="empty">Keine Daten</div>`;
+  const [d,v] = aggPts[aggPts.length-1];
+  const chg = gtChangePct(aggPts);
+  const periodWord = {daily:"Vortag", weekly:"Vorwoche", monthly:"Vormonat", quarterly:"Vorquartal"}[gtFreq];
+  return `<h3>${label}</h3>
+    <div><span class="kpi-val">${fmt(v,1)}</span>
+      <span style="font-size:12px;color:var(--muted)">Index 0–100</span>
+      ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`:""}
+    </div>
+    <canvas height="110"></canvas>
+    <div class="src">Stand: ${d}${sourceHtml?` · Quelle: ${sourceHtml}`:""}</div>`;
+}
+
+function gtDrawChart(canvas, aggPts, color){
+  const show = aggPts.slice(-60);
+  charts.push(new Chart(canvas, {
+    type:"line",
+    data:{labels:show.map(p=>p[0]), datasets:[{data:show.map(p=>p[1]), borderColor:color, backgroundColor:color+"14", fill:true, pointRadius:0, tension:.25, borderWidth:2}]},
+    options:{plugins:{legend:{display:false}}, scales:{x:{ticks:{maxTicksLimit:6,font:{size:10}}}, y:{ticks:{font:{size:10}}}}, animation:false}
+  }));
+}
+
+function renderGtrends(){
+  const all = gtSeriesList();
+  if(gtChecked === null){ gtChecked = new Set(all.map(([sid])=>sid)); }
+
+  // Frequenz-Subnav
+  const sub = document.getElementById("gtSubnav"); sub.innerHTML = "";
+  for(const [f,label] of GT_SUBFREQS){
+    const b = document.createElement("button"); b.textContent = label;
+    b.className = f===gtFreq ? "active" : "";
+    b.onclick = () => { gtFreq = f; renderGtrends(); };
+    sub.appendChild(b);
+  }
+
+  if(!all.length){
+    document.getElementById("gtIndexCard").innerHTML = "";
+    document.getElementById("gtGroups").innerHTML = "";
+    document.getElementById("gtGrid").innerHTML = `<div class="empty">Noch keine Google-Trends-Daten – der erste Cron-Lauf füllt diese Ansicht.</div>`;
+    return;
+  }
+
+  // Gesamt-Index (nur ausgewaehlte Suchbegriffe)
+  const idxAgg = gtAggregate(gtCompositeDaily(gtChecked), gtFreq);
+  const idxCard = document.getElementById("gtIndexCard");
+  idxCard.innerHTML = `<h3>Google-Trends-Index (${gtChecked.size} von ${all.length} Suchbegriffen)</h3>` +
+    (idxAgg.length ? gtCardHtml("", idxAgg, null).replace(/<h3>.*?<\/h3>/,"") : `<div class="empty">Keine Suchbegriffe ausgewählt</div>`);
+  if(idxAgg.length) gtDrawChart(idxCard.querySelector("canvas"), idxAgg, "#5b21b6");
+
+  // Gruppen + Checkboxen
+  const groups = {};
+  for(const [sid,s] of all){
+    const g = s.group || "sonstige";
+    (groups[g] = groups[g] || {label:s.group_label||g, items:[]}).items.push([sid,s]);
+  }
+  const gEl = document.getElementById("gtGroups"); gEl.innerHTML = "";
+  for(const [gkey,g] of Object.entries(groups)){
+    const div = document.createElement("div"); div.className = "gt-group";
+    div.innerHTML = `<div class="gt-group-label">${g.label}</div><div class="gt-checks"></div>`;
+    const checksDiv = div.querySelector(".gt-checks");
+    g.items.sort((a,b)=>(a[1].keyword||a[0]).localeCompare(b[1].keyword||b[0],"de"));
+    for(const [sid,s] of g.items){
+      const lab = document.createElement("label");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = gtChecked.has(sid);
+      cb.onchange = () => { if(cb.checked) gtChecked.add(sid); else gtChecked.delete(sid); renderGtrends(); };
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(s.keyword || sid));
+      checksDiv.appendChild(lab);
+    }
+    gEl.appendChild(div);
+  }
+
+  // Einzelkarten (nur ausgewaehlte)
+  const grid = document.getElementById("gtGrid"); grid.innerHTML = "";
+  const visible = all.filter(([sid])=>gtChecked.has(sid)).sort((a,b)=>(a[1].keyword||a[0]).localeCompare(b[1].keyword||b[0],"de"));
+  if(!visible.length){
+    grid.innerHTML = `<div class="empty">Keine Suchbegriffe ausgewählt – oben Häkchen setzen.</div>`;
+    return;
+  }
+  for(const [sid,s] of visible){
+    const agg = gtAggregate(s.points, gtFreq);
+    const card = document.createElement("div"); card.className = "card";
+    const src = s.source_url ? `<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>` : s.source;
+    card.innerHTML = gtCardHtml(s.keyword || s.label, agg, src);
+    grid.appendChild(card);
+    if(agg.length) gtDrawChart(card.querySelector("canvas"), agg, "#1a3c6e");
+  }
+}
+
 function init(){
   const nav=document.getElementById("tabs");
   for(const [f,label] of FREQS){
@@ -196,6 +367,9 @@ function init(){
   const mapBtn=document.createElement("button"); mapBtn.textContent="Karte (Radverkehr)"; mapBtn.dataset.f="map";
   mapBtn.onclick=()=>{active="map";render();};
   nav.appendChild(mapBtn);
+  const gtBtn=document.createElement("button"); gtBtn.textContent="Google Trends"; gtBtn.dataset.f="gtrends";
+  gtBtn.onclick=()=>{active="gtrends";render();};
+  nav.appendChild(gtBtn);
   document.getElementById("footer").innerHTML =
     `Quellen u.&nbsp;a.: Statistisches Bundesamt (Destatis) – Datenlizenz Deutschland – Namensnennung – 2.0
      (<a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>) · Eurostat · Google Trends ·

@@ -22,16 +22,35 @@ from common import add_point, upsert_series
 SOURCE = "Google Trends (via pytrends, inoffiziell)"
 
 
+def _flatten_keyword_groups(cfg):
+    """config.google_trends.keyword_groups -> [(keyword, group_key, group_label), ...],
+    dedupliziert (falls derselbe Begriff versehentlich in zwei Gruppen steht, zaehlt
+    die erste Fundstelle)."""
+    seen = {}
+    out = []
+    for gkey, gval in cfg.get("keyword_groups", {}).items():
+        label = gval.get("label", gkey)
+        for kw in gval.get("terms", []):
+            if kw in seen:
+                continue
+            seen[kw] = True
+            out.append((kw, gkey, label))
+    return out
+
+
 def fetch(data, config, errors):
     from pytrends.request import TrendReq
 
     cfg = config.get("google_trends", {})
-    keywords = cfg.get("keywords", [])[:25]
+    kw_entries = _flatten_keyword_groups(cfg)[:25]
     geo = cfg.get("geo", "DE")
     backfill_timeframe = os.environ.get("GTRENDS_BACKFILL_TIMEFRAME", "").strip()
     timeframe = backfill_timeframe or cfg.get("timeframe", "today 3-m")
     if backfill_timeframe:
         print(f"google_trends: BACKFILL-Modus, timeframe={backfill_timeframe}", flush=True)
+
+    group_of = {kw: (gkey, glabel) for kw, gkey, glabel in kw_entries}
+    keywords = [kw for kw, _, _ in kw_entries]
 
     # Hinweis: retries-Parameter von pytrends ist mit urllib3>=2 inkompatibel -> eigener Retry
     py = TrendReq(hl="de-DE", tz=60)
@@ -56,6 +75,7 @@ def fetch(data, config, errors):
             for kw in batch:
                 if kw not in df.columns:
                     continue
+                gkey, glabel = group_of.get(kw, ("sonstige", "Sonstige"))
                 sid = "gtrends_" + kw.lower().replace(" ", "_").replace("&", "und")
                 s = upsert_series(
                     data, sid,
@@ -63,6 +83,9 @@ def fetch(data, config, errors):
                     unit="Index 0-100", scope="branche",
                     source=SOURCE, source_url="https://trends.google.de",
                 )
+                s["group"] = gkey
+                s["group_label"] = glabel
+                s["keyword"] = kw
                 rows = df[kw] if backfill_timeframe else df[kw].tail(30)
                 for ts, val in rows.items():
                     add_point(s, ts.date().isoformat(), float(val), "daily")
