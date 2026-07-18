@@ -43,7 +43,7 @@ Eurostat-Daten dürfen laut Eurostat-Lizenzpolitik (CC BY 4.0-basiert) frei weit
 - **Pinterest Trends:** kein offizielles API; Best-Effort-Scraper, ToS-Grauzone. Auf Wunsch aktiviert (`pinterest_trends.enabled`), kann jederzeit deaktiviert werden.
 - **Aktienkurse (Yahoo/Stooq):** nur zur Information, kein Weitervertrieb der Rohdaten.
 - **ifo:** Kennzahl aus öffentlicher Pressemitteilung mit Quellenangabe (Zitatrecht/Pressemitteilungscharakter); keine Vervielfältigung ganzer Publikationen.
-- **IR-Berichte:** öffentliche Pflichtveröffentlichungen; wir speichern Links + einzelne Kennzahlen mit Quellenangabe, keine PDF-Weiterverbreitung.
+- **IR-Berichte:** öffentliche Pflichtveröffentlichungen; wir speichern Links + einzelne Kennzahlen mit Quellenangabe, keine PDF-/XLSX-Weiterverbreitung. Bei Zalando werden seit 07/2026 rein numerische Kennzahlen (keine Formatierung, Kommentare oder Layout) aus der öffentlich zum Download bereitgestellten „Financials XLS" strukturiert ausgelesen (statt einzelner Werte per PDF-Text-Regex) – die Rohdatei selbst wird nicht gespeichert oder veröffentlicht, nur die extrahierten Zahlen mit Link zur offiziellen Quelle.
 
 ## 5. Radverkehr-Dauerzählstellen (5 Regionen, Stand 07/2026) — ✅ unkritisch mit Namensnennung
 

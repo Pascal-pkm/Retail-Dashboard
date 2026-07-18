@@ -146,16 +146,15 @@
   },
 
   "ir_reports": {
-    "_hinweis": "Konzernweite KPIs (GMV, aktive Kunden, AOV) - KEINE Standortdaten. PDF-Extraktion ist best-effort; mindestens der Berichtslink wird gespeichert.",
+    "_hinweis": "Konzernweite KPIs - KEINE Standortdaten. PDF-Extraktion ist best-effort; mindestens der Berichtslink wird gespeichert. Zalando liefert zusaetzlich eine strukturierte 'Financials XLS' pro Quartal (7 Sheets, ~35 KPIs, Historie seit Q1/2020) - deutlich zuverlaessiger als PDF-Text, siehe financials_xlsx_title.",
     "companies": {
       "zalando": {
         "name": "Zalando SE (inkl. About You seit Übernahme 2025)",
         "ir_url": "https://corporate.zalando.com/en/investor-relations/financial-reporting",
-        "kpi_patterns": {
-          "GMV (Mrd. EUR)": "GMV[^0-9]{0,40}([0-9]+[.,][0-9]+)\\s*(?:bn|billion|Mrd)",
-          "Aktive Kunden (Mio.)": "active customers[^0-9]{0,40}([0-9]+[.,][0-9]+)",
-          "AOV (EUR)": "average (?:basket size|order value)[^0-9]{0,40}([0-9]+[.,][0-9]+)"
-        }
+        "financials_xlsx_title": "Financials XLS",
+        "presentation_title": "Earnings Call Presentation",
+        "xlsx_sheets": ["1_Group key figures", "4_Segment performance"],
+        "_hinweis": "kpi_patterns wird fuer Zalando NICHT mehr genutzt (siehe xlsx-Extraktion in ir_reports.py); Feld bewusst leer gelassen."
       },
       "inditex": {
         "name": "Inditex",
