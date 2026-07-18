@@ -1,19 +1,26 @@
-"""Newsletter-Versand via Resend (kostenloser Tier): python scripts/newsletter.py <freq>
+"""Newsletter-Versand via Gmail SMTP (App-Passwort): python scripts/newsletter.py <freq>
 
 Benoetigte Umgebungsvariablen (GitHub-Secrets):
-  RESEND_API_KEY     - API-Key von resend.com
-  NEWSLETTER_FROM    - Absender, z.B. "Retail KPI <onboarding@resend.dev>"
-  NEWSLETTER_TO      - Empfaenger, kommagetrennt
+  GMAIL_ADDRESS       - deine Gmail-Adresse (Absender), z.B. deinname@gmail.com
+  GMAIL_APP_PASSWORD  - App-Passwort aus den Google-Konto-Sicherheitseinstellungen
+                        (NICHT dein normales Gmail-Passwort - dafuer muss die
+                        2-Faktor-Authentifizierung aktiv sein: myaccount.google.com/apppasswords)
+  NEWSLETTER_TO       - Empfaenger, kommagetrennt (i.d.R. deine eigene Adresse)
 Optional: NEWSLETTER_ENABLED=true als Repo-Variable (Gate im Workflow).
-Ohne API-Key bricht das Script NICHT hart ab (Exit 0 mit Hinweis).
+Ohne Zugangsdaten bricht das Script NICHT hart ab (Exit 0 mit Hinweis).
 """
 import os
+import smtplib
 import sys
 from datetime import date
-
-import requests
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
 
 from common import fmt_de, load_config, load_data, pct_change
+
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = 587
 
 FREQ_TITLE = {
     "daily": "Täglicher Überblick",
@@ -82,14 +89,27 @@ Destatis-Daten: Datenlizenz Deutschland – Namensnennung – 2.0 (dl-de/by-2-0)
 </body></html>"""
 
 
+def send_via_gmail(html, subject, to_list, gmail_address, app_password):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = formataddr(("Retail KPI Dashboard", gmail_address))
+    msg["To"] = ", ".join(to_list)
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
+        server.starttls()
+        server.login(gmail_address, app_password)
+        server.sendmail(gmail_address, to_list, msg.as_string())
+
+
 def main():
     freq = sys.argv[1] if len(sys.argv) > 1 else "daily"
     if freq not in FREQ_TITLE:
         sys.exit(f"Aufruf: python scripts/newsletter.py <{'|'.join(FREQ_TITLE)}>")
 
-    api_key = os.environ.get("RESEND_API_KEY", "").strip()
+    gmail_address = os.environ.get("GMAIL_ADDRESS", "").strip()
+    app_password = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
     to = [x.strip() for x in os.environ.get("NEWSLETTER_TO", "").split(",") if x.strip()]
-    sender = os.environ.get("NEWSLETTER_FROM", "Retail KPI Dashboard <onboarding@resend.dev>")
 
     data = load_data()
     config = load_config()
@@ -101,24 +121,19 @@ def main():
         f.write(html)
     print(f"Vorschau geschrieben: {out}")
 
-    if not api_key or not to:
-        print("RESEND_API_KEY oder NEWSLETTER_TO nicht gesetzt - Versand uebersprungen.")
+    if not gmail_address or not app_password or not to:
+        print("GMAIL_ADDRESS/GMAIL_APP_PASSWORD/NEWSLETTER_TO nicht vollständig gesetzt - Versand uebersprungen.")
         return
 
-    r = requests.post(
-        "https://api.resend.com/emails",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={
-            "from": sender,
-            "to": to,
-            "subject": f"Retail-KPI {FREQ_TITLE[freq]} – {date.today().strftime('%d.%m.%Y')}",
-            "html": html,
-        },
-        timeout=30,
-    )
-    if r.status_code >= 300:
-        sys.exit(f"Resend-Fehler {r.status_code}: {r.text[:300]}")
-    print(f"Newsletter ({freq}) versendet an {len(to)} Empfänger. ID: {r.json().get('id')}")
+    subject = f"Retail-KPI {FREQ_TITLE[freq]} – {date.today().strftime('%d.%m.%Y')}"
+    try:
+        send_via_gmail(html, subject, to, gmail_address, app_password)
+    except smtplib.SMTPAuthenticationError as e:
+        sys.exit(f"Gmail-Login fehlgeschlagen (App-Passwort korrekt & 2FA aktiv?): {e}")
+    except Exception as e:  # noqa: BLE001
+        sys.exit(f"Gmail-Versand fehlgeschlagen: {e}")
+
+    print(f"Newsletter ({freq}) via Gmail an {len(to)} Empfänger versendet.")
 
 
 if __name__ == "__main__":

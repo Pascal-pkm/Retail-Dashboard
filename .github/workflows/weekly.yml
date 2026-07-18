@@ -35,7 +35,7 @@ jobs:
       - name: Newsletter versenden
         if: vars.NEWSLETTER_ENABLED == 'true'
         env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          NEWSLETTER_FROM: ${{ vars.NEWSLETTER_FROM }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
         run: python scripts/newsletter.py weekly
