@@ -8,55 +8,71 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-  :root{--blue:#1a3c6e;--bg:#f5f6f8;--card:#fff;--muted:#6b7280;}
+  :root{
+    --bg:#2b3137; --bg2:#22272b; --card:#363d44; --card-border:#484f57;
+    --accent:#d7e94a; --accent-dark:#232a10;
+    --text:#eef1f2; --muted:#9aa3ab;
+    --up:#6ee7a0; --down:#f87171;
+    --grid-line:#3f464d;
+  }
   *{box-sizing:border-box;margin:0}
-  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:#1f2937}
-  header{background:var(--blue);color:#fff;padding:22px 28px}
-  header h1{font-size:22px;font-weight:600}
-  header p{opacity:.85;font-size:13px;margin-top:4px}
-  nav{display:flex;gap:8px;padding:14px 28px;background:#fff;border-bottom:1px solid #e5e7eb;flex-wrap:wrap}
-  nav button{border:1px solid #d1d5db;background:#fff;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:14px}
-  nav button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
-  main{padding:20px 28px;max-width:1200px;margin:auto}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:var(--bg2);color:var(--text);padding:22px 28px;border-bottom:3px solid var(--accent)}
+  header h1{font-size:22px;font-weight:800;color:var(--accent);letter-spacing:.2px}
+  header p{opacity:.75;font-size:13px;margin-top:4px}
+  nav{display:flex;gap:8px;padding:14px 28px;background:var(--bg2);border-bottom:1px solid var(--card-border);flex-wrap:wrap}
+  nav button{border:1px solid var(--card-border);background:transparent;color:var(--text);padding:8px 18px;border-radius:20px;cursor:pointer;font-size:14px;font-weight:600}
+  nav button.active{background:var(--accent);color:var(--accent-dark);border-color:var(--accent)}
+  main{padding:20px 28px;max-width:1280px;margin:auto}
   .meta{font-size:12px;color:var(--muted);margin-bottom:14px}
-  .comments{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:18px}
-  .comments h2{font-size:15px;margin-bottom:8px;color:var(--blue)}
-  .comments li{margin:4px 0 4px 18px;font-size:14px}
+  .comments{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px 20px;margin-bottom:18px}
+  .comments h2{font-size:15px;margin-bottom:8px;color:var(--accent)}
+  .comments li{margin:4px 0 4px 18px;font-size:14px;color:var(--text)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-  .card{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px}
-  .card h3{font-size:14px;font-weight:600;margin-bottom:2px}
-  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin:4px 4px 8px 0}
-  .badge.standort{background:#dcfce7;color:#166534}
-  .badge.konzern{background:#fee2e2;color:#991b1b}
-  .badge.branche{background:#dbeafe;color:#1e40af}
-  .badge.region{background:#ede9fe;color:#5b21b6}
-  .kpi-val{font-size:20px;font-weight:700}
-  .kpi-chg{font-size:13px;margin-left:8px}
-  .up{color:#15803d}.down{color:#b91c1c}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;position:relative}
+  .card h3{font-size:14px;font-weight:600;margin-bottom:2px;color:var(--text)}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin:4px 4px 8px 0;font-weight:600}
+  .badge.standort{background:rgba(110,231,160,.15);color:var(--up)}
+  .badge.konzern{background:rgba(248,113,113,.15);color:var(--down)}
+  .badge.branche{background:rgba(96,165,250,.15);color:#60a5fa}
+  .badge.region{background:rgba(216,180,254,.15);color:#d8b4fe}
+  .kpi-val{font-size:22px;font-weight:800;color:var(--text)}
+  .kpi-chg{font-size:13px;margin-left:8px;font-weight:600}
+  .up{color:var(--up)}.down{color:var(--down)}
   .src{font-size:11px;color:var(--muted);margin-top:8px}
-  canvas{margin-top:6px}
-  .ir-list a{color:var(--blue)}
-  .errors{margin-top:22px;font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px}
+  .src a{color:var(--accent)}
+  canvas{margin-top:6px;cursor:pointer}
+  .ir-list a{color:var(--accent)}
+  .errors{margin-top:22px;font-size:12px;color:#fbbf24;background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.4);border-radius:8px;padding:10px 14px}
   .empty{padding:40px;text-align:center;color:var(--muted)}
-  footer{padding:24px 28px;font-size:12px;color:var(--muted);max-width:1200px;margin:auto}
-  .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:13px;color:#7c2d12;margin-bottom:18px}
-  #mapview{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-top:4px}
+  footer{padding:24px 28px;font-size:12px;color:var(--muted);max-width:1280px;margin:auto}
+  footer a{color:var(--accent)}
+  .note{background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#fcd34d;margin-bottom:18px}
+  .note em{color:#fde68a}
+  #mapview{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;margin-top:4px}
   #map{height:560px;border-radius:8px;margin-top:10px}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
   .legend span.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--text)}
   .leaflet-popup-content{font-size:13px;line-height:1.5}
-  #gtrendsview{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-top:4px}
-  .subnav{display:flex;gap:6px;margin:10px 0 16px}
-  .subnav button{border:1px solid #d1d5db;background:#fff;padding:5px 14px;border-radius:14px;cursor:pointer;font-size:12px;color:#374151}
-  .subnav button.active{background:#1a3c6e;color:#fff;border-color:#1a3c6e}
-  .gt-index{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:16px 18px;margin-bottom:18px}
-  .gt-index h3{font-size:14px;color:#5b21b6;margin-bottom:6px}
-  .gt-groups{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
-  .gt-group{border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px}
-  .gt-group-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  #gtrendsview{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;margin-top:4px}
+  .subnav{display:flex;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
+  .subnav button{border:1px solid var(--card-border);background:transparent;color:var(--text);padding:5px 14px;border-radius:14px;cursor:pointer;font-size:12px}
+  .subnav button.active{background:var(--accent);color:var(--accent-dark);border-color:var(--accent);font-weight:700}
+  .filterbar{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:12px 0 4px;padding:10px 12px;background:var(--bg2);border:1px solid var(--card-border);border-radius:8px}
+  .filterbar .grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .filterbar label{font-size:11px;color:var(--muted)}
+  .filterbar input[type=date]{background:var(--bg);color:var(--text);border:1px solid var(--card-border);border-radius:6px;padding:4px 6px;font-size:12px}
+  .filterbar button.reset{border:1px solid var(--accent);color:var(--accent);background:transparent;padding:5px 12px;border-radius:14px;cursor:pointer;font-size:12px}
+  .gt-index{background:var(--bg2);border:1px solid var(--accent);border-radius:10px;padding:16px 18px;margin-bottom:6px}
+  .gt-index h3{font-size:15px;color:var(--accent);margin-bottom:6px}
+  .gt-index .hint{font-size:11px;color:var(--muted);margin-top:6px}
+  .gt-groups{display:flex;flex-direction:column;gap:10px;margin:18px 0}
+  .gt-group{border:1px solid var(--card-border);border-radius:8px;padding:10px 12px}
+  .gt-group-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
   .gt-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
-  .gt-checks label{font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer}
-  .gt-off{opacity:.45}
+  .gt-checks label{font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text)}
+  .zoom-btn{position:absolute;top:12px;right:14px;font-size:11px;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:12px;padding:2px 10px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -74,24 +90,23 @@
     Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort sind <em>nicht öffentlich verfügbar</em>;
     die nächste Annäherung sind konzernweite Quartalskennzahlen (z.&nbsp;B. AOV) aus IR-Berichten.
     Die <span class="badge region">Regional-Index</span>-Kennzahlen basieren auf Fahrrad-Dauerzählstellen
-    (nicht Fußgänger!) in 5 Regionen und dienen nur als grober Tendenz-Proxy für Wegefrequenzen.</div>
+    (nicht Fußgänger!) in 5 Regionen und dienen nur als grober Tendenz-Proxy für Wegefrequenzen.
+    <em>Klick auf einen Graphen zoomt in den umliegenden Zeitraum – „Zoom zurücksetzen" oben rechts an der Karte macht das rückgängig.</em></div>
   <div class="comments" id="comments" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="ir"></div>
   <div class="errors" id="errors" hidden></div>
   <div id="mapview" hidden>
-    <h2 style="font-size:15px;color:var(--blue)">Radverkehr-Zählstellen (Tendenz-Proxy für Wegefrequenzen)</h2>
+    <h2 style="font-size:15px;color:var(--accent)">Radverkehr-Zählstellen (Tendenz-Proxy für Wegefrequenzen)</h2>
     <p style="font-size:13px;color:var(--muted);margin-top:4px">Fahrrad-Dauerzählstellen aus 5 frei zugänglichen Regionen (Baden-Württemberg, Hamburg, Leipzig, München, Münster/NRW).
       Farbe = Region, Größe = zuletzt gemeldeter Tageswert. <strong>Kein Fußgänger-Proxy</strong>, sondern Radverkehr – als grober Trendindikator zu verstehen.</p>
     <div id="map"></div>
     <div class="legend" id="mapLegend"></div>
   </div>
   <div id="gtrendsview" hidden>
-    <h2 style="font-size:15px;color:var(--blue)">Google Trends – Suchinteresse Mode &amp; Einzelhandel</h2>
-    <p style="font-size:13px;color:var(--muted);margin-top:4px">Rohdaten sind täglich; die Ansicht unten aggregiert (Durchschnitt) auf die gewählte Frequenz.
-      Abweichung, Graphen und der Gesamt-Index passen sich automatisch an – auch wenn du unten Suchbegriffe abwählst.</p>
-    <div class="subnav" id="gtSubnav"></div>
+    <h2 style="font-size:15px;color:var(--accent)">Google Trends – Suchinteresse Mode &amp; Einzelhandel</h2>
     <div class="gt-index" id="gtIndexCard"></div>
+    <div class="filterbar" id="gtFilterbar"></div>
     <div class="gt-groups" id="gtGroups"></div>
     <div class="grid" id="gtGrid"></div>
   </div>
@@ -101,13 +116,50 @@
 <script>
 const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
 const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt", region:"Regional-Index (Radverkehr-Proxy)"};
-const REGION_COLOR = {bw:"#1a3c6e", hamburg:"#b91c1c", leipzig:"#15803d", muenchen:"#c2410c", nrw_muenster:"#7c3aed"};
+const REGION_COLOR = {bw:"#d7e94a", hamburg:"#f87171", leipzig:"#6ee7a0", muenchen:"#fb923c", nrw_muenster:"#c084fc"};
 const REGION_LABEL = {bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)"};
 const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
+const GT_PRESETS = [["7d","7 Tage"],["30d","30 Tage"],["90d","90 Tage"],["1y","1 Jahr"],["5y","5 Jahre"],["all","Alles"]];
+const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
+
 let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
-let gtFreq = "daily", gtChecked = null;
+let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null;
+let cardZoom = {}; // sid -> {from, to} (Datumsstrings), fuer Klick-Zoom auf den Standard-Karten
 
 const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
+const todayISO = () => new Date().toISOString().slice(0,10);
+const addDaysISO = (iso, days) => { const d = new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10); };
+
+function baseChartOptions(unitLabel, onPointClick){
+  return {
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#1c2024', titleColor:'#eef1f2', bodyColor:'#eef1f2',
+        borderColor:'#4a5158', borderWidth:1, padding:10, displayColors:false,
+        callbacks:{ label:(ctx)=> `${fmt(ctx.parsed.y, Math.abs(ctx.parsed.y)>=1000?0:2)}${unitLabel?' '+unitLabel:''}` }
+      }
+    },
+    scales:{
+      x:{ticks:{maxTicksLimit:6,font:{size:10},color:'#9aa3ab'},grid:{color:'#3f464d'}},
+      y:{ticks:{font:{size:10},color:'#9aa3ab'},grid:{color:'#3f464d'}}
+    },
+    animation:false,
+    onClick: onPointClick ? (evt, els, chart) => {
+      if(!els.length) return;
+      onPointClick(els[0].index, chart);
+    } : undefined,
+  };
+}
+
+function drawLineChart(canvas, points, color, unitLabel, onPointClick){
+  charts.push(new Chart(canvas, {
+    type:"line",
+    data:{labels:points.map(p=>p[0]), datasets:[{data:points.map(p=>p[1]), borderColor:color, backgroundColor:color+"22", fill:true, pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:color, tension:.25, borderWidth:2}]},
+    options: baseChartOptions(unitLabel, onPointClick),
+  }));
+}
 
 function render(){
   charts.forEach(c=>c.destroy()); charts=[];
@@ -148,10 +200,14 @@ function render(){
   if(!series.length) grid.innerHTML = `<div class="empty">Noch keine Daten – der erste Cron-Lauf füllt dieses Panel.</div>`;
   series.sort((a,b)=>a[1].label.localeCompare(b[1].label,"de"));
   for(const [sid,s] of series){
-    const pts=s.points, [d,v]=pts[pts.length-1];
-    let chg=null; if(pts.length>1 && pts[pts.length-2][1]) chg=(v-pts[pts.length-2][1])/Math.abs(pts[pts.length-2][1])*100;
+    const allPts = s.points;
+    const zoom = cardZoom[sid];
+    const show = zoom ? allPts.filter(p=>p[0]>=zoom.from && p[0]<=zoom.to) : allPts.slice(-60);
+    const basis = show.length ? show : allPts.slice(-1);
+    const [d,v] = basis[basis.length-1];
+    let chg=null; if(basis.length>1 && basis[basis.length-2][1]) chg=(v-basis[basis.length-2][1])/Math.abs(basis[basis.length-2][1])*100;
     const card=document.createElement("div"); card.className="card";
-    card.innerHTML = `<h3>${s.label}</h3>
+    card.innerHTML = `${zoom?`<button class="zoom-btn" data-sid="${sid}">Zoom zurücksetzen</button>`:""}<h3>${s.label}</h3>
       <span class="badge ${s.scope}">${SCOPE[s.scope]||s.scope||""}</span>
       <div><span class="kpi-val">${fmt(v, v>1000?0:2)}</span>
         <span style="font-size:12px;color:var(--muted)">${s.unit||""}</span>
@@ -160,12 +216,15 @@ function render(){
       <canvas height="110"></canvas>
       <div class="src">Stand: ${d} · Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</div>`;
     grid.appendChild(card);
-    const show = pts.slice(-60);
-    charts.push(new Chart(card.querySelector("canvas"),{
-      type:"line",
-      data:{labels:show.map(p=>p[0]),datasets:[{data:show.map(p=>p[1]),borderColor:"#1a3c6e",backgroundColor:"rgba(26,60,110,.08)",fill:true,pointRadius:0,tension:.25,borderWidth:2}]},
-      options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:6,font:{size:10}}},y:{ticks:{font:{size:10}}}},animation:false}
-    }));
+    const zoomBtn = card.querySelector(".zoom-btn");
+    if(zoomBtn) zoomBtn.onclick = () => { delete cardZoom[sid]; render(); };
+    drawLineChart(card.querySelector("canvas"), show, "#d7e94a", s.unit, (idx) => {
+      const clickedDate = show[idx][0];
+      const window = active==="daily" ? 10 : active==="weekly" ? 8 : active==="monthly" ? 6 : 4;
+      const unitDays = active==="daily" ? 1 : active==="weekly" ? 7 : active==="monthly" ? 30 : 91;
+      cardZoom[sid] = { from: addDaysISO(clickedDate, -window*unitDays), to: addDaysISO(clickedDate, window*unitDays) };
+      render();
+    });
   }
 
   // IR-Berichte (nur Quartal)
@@ -200,7 +259,7 @@ function renderMap(){
     if(s.lat==null || s.lon==null) continue;
     const pts = s.points||[];
     const last = pts.length ? pts[pts.length-1] : null;
-    const color = REGION_COLOR[s.region] || "#374151";
+    const color = REGION_COLOR[s.region] || "#9aa3ab";
     const radius = last ? 4 + 10*Math.sqrt(Math.max(last[1],0)/maxVal) : 4;
     const marker = L.circleMarker([s.lat,s.lon], {
       radius, color, fillColor: color, fillOpacity:.55, weight:1.5,
@@ -233,10 +292,35 @@ function gtBucketKey(dateStr, freq){
   return dateStr;
 }
 
+function gtBucketSpan(bucketKey, freq){
+  // Datumsspanne eines Buckets - fuer Drill-Down (Klick auf Monatswert -> Zeitraum dieses Monats)
+  if(freq === "weekly") return { from: bucketKey, to: addDaysISO(bucketKey, 6) };
+  if(freq === "monthly"){
+    const [y,m] = bucketKey.split("-").map(Number);
+    const next = m===12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,"0")}-01`;
+    return { from: bucketKey, to: addDaysISO(next, -1) };
+  }
+  if(freq === "quarterly"){
+    const [y,qs] = bucketKey.split("-Q"); const q = Number(qs);
+    const startMonth = (q-1)*3+1;
+    const from = `${y}-${String(startMonth).padStart(2,"0")}-01`;
+    const nextQMonth = startMonth+3;
+    const to = nextQMonth>12 ? addDaysISO(`${Number(y)+1}-01-01`,-1) : addDaysISO(`${y}-${String(nextQMonth).padStart(2,"0")}-01`,-1);
+    return { from, to };
+  }
+  return { from: bucketKey, to: bucketKey };
+}
+
+function gtFilterRange(points){
+  if(!gtRangeFrom && !gtRangeTo) return points;
+  return points.filter(([d]) => (!gtRangeFrom || d>=gtRangeFrom) && (!gtRangeTo || d<=gtRangeTo));
+}
+
 function gtAggregate(points, freq){
-  if(freq === "daily") return points;
+  const filtered = gtFilterRange(points);
+  if(freq === "daily") return filtered;
   const buckets = new Map();
-  for(const [d,v] of points){
+  for(const [d,v] of filtered){
     const key = gtBucketKey(d, freq);
     if(!buckets.has(key)) buckets.set(key, {sum:0, count:0});
     const b = buckets.get(key); b.sum += v; b.count++;
@@ -267,41 +351,74 @@ function gtChangePct(aggPts){
   return (cur-prev)/Math.abs(prev)*100;
 }
 
-function gtCardHtml(label, aggPts, sourceHtml){
-  if(!aggPts.length) return `<div class="empty">Keine Daten</div>`;
-  const [d,v] = aggPts[aggPts.length-1];
-  const chg = gtChangePct(aggPts);
-  const periodWord = {daily:"Vortag", weekly:"Vorwoche", monthly:"Vormonat", quarterly:"Vorquartal"}[gtFreq];
-  return `<h3>${label}</h3>
-    <div><span class="kpi-val">${fmt(v,1)}</span>
-      <span style="font-size:12px;color:var(--muted)">Index 0–100</span>
-      ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`:""}
-    </div>
-    <canvas height="110"></canvas>
-    <div class="src">Stand: ${d}${sourceHtml?` · Quelle: ${sourceHtml}`:""}</div>`;
+function gtOnDrillClick(aggPts){
+  return (idx) => {
+    const bucketKey = aggPts[idx][0];
+    const finer = DRILL_DOWN_FREQ[gtFreq];
+    if(finer){
+      const span = gtBucketSpan(bucketKey, gtFreq);
+      gtFreq = finer; gtRangeFrom = span.from; gtRangeTo = span.to;
+    } else {
+      // schon taeglich - enger auf +/-10 Tage um den Klickpunkt zoomen
+      gtRangeFrom = addDaysISO(bucketKey, -10); gtRangeTo = addDaysISO(bucketKey, 10);
+    }
+    renderGtrends();
+  };
 }
 
-function gtDrawChart(canvas, aggPts, color){
-  const show = aggPts.slice(-60);
-  charts.push(new Chart(canvas, {
-    type:"line",
-    data:{labels:show.map(p=>p[0]), datasets:[{data:show.map(p=>p[1]), borderColor:color, backgroundColor:color+"14", fill:true, pointRadius:0, tension:.25, borderWidth:2}]},
-    options:{plugins:{legend:{display:false}}, scales:{x:{ticks:{maxTicksLimit:6,font:{size:10}}}, y:{ticks:{font:{size:10}}}}, animation:false}
-  }));
+function gtApplyPreset(key){
+  if(key === "all"){ gtRangeFrom = null; gtRangeTo = null; renderGtrends(); return; }
+  const days = {"7d":7,"30d":30,"90d":90,"1y":365,"5y":365*5}[key];
+  gtRangeTo = null;
+  gtRangeFrom = addDaysISO(todayISO(), -days);
+  renderGtrends();
+}
+
+function renderGtFilterbar(){
+  const bar = document.getElementById("gtFilterbar");
+  bar.innerHTML = "";
+
+  const freqGrp = document.createElement("div"); freqGrp.className = "grp";
+  for(const [f,label] of GT_SUBFREQS){
+    const b = document.createElement("button"); b.textContent = label; b.className = "subnav-btn" + (f===gtFreq?" active":"");
+    b.style.cssText = "border:1px solid var(--card-border);background:transparent;color:var(--text);padding:5px 14px;border-radius:14px;cursor:pointer;font-size:12px";
+    if(f===gtFreq){ b.style.background="var(--accent)"; b.style.color="var(--accent-dark)"; b.style.fontWeight="700"; }
+    b.onclick = () => { gtFreq = f; renderGtrends(); };
+    freqGrp.appendChild(b);
+  }
+  bar.appendChild(freqGrp);
+
+  const presetGrp = document.createElement("div"); presetGrp.className = "grp";
+  for(const [key,label] of GT_PRESETS){
+    const b = document.createElement("button"); b.textContent = label;
+    b.style.cssText = "border:1px solid var(--card-border);background:transparent;color:var(--text);padding:5px 12px;border-radius:14px;cursor:pointer;font-size:12px";
+    b.onclick = () => gtApplyPreset(key);
+    presetGrp.appendChild(b);
+  }
+  bar.appendChild(presetGrp);
+
+  const rangeGrp = document.createElement("div"); rangeGrp.className = "grp";
+  const fromLabel = document.createElement("label"); fromLabel.textContent = "von";
+  const fromInput = document.createElement("input"); fromInput.type = "date"; fromInput.value = gtRangeFrom || "";
+  fromInput.onchange = () => { gtRangeFrom = fromInput.value || null; renderGtrends(); };
+  const toLabel = document.createElement("label"); toLabel.textContent = "bis";
+  const toInput = document.createElement("input"); toInput.type = "date"; toInput.value = gtRangeTo || "";
+  toInput.onchange = () => { gtRangeTo = toInput.value || null; renderGtrends(); };
+  rangeGrp.append(fromLabel, fromInput, toLabel, toInput);
+  bar.appendChild(rangeGrp);
+
+  if(gtRangeFrom || gtRangeTo){
+    const resetBtn = document.createElement("button"); resetBtn.textContent = "Zeitraum zurücksetzen"; resetBtn.className = "reset";
+    resetBtn.onclick = () => { gtRangeFrom = null; gtRangeTo = null; renderGtrends(); };
+    bar.appendChild(resetBtn);
+  }
 }
 
 function renderGtrends(){
   const all = gtSeriesList();
   if(gtChecked === null){ gtChecked = new Set(all.map(([sid])=>sid)); }
 
-  // Frequenz-Subnav
-  const sub = document.getElementById("gtSubnav"); sub.innerHTML = "";
-  for(const [f,label] of GT_SUBFREQS){
-    const b = document.createElement("button"); b.textContent = label;
-    b.className = f===gtFreq ? "active" : "";
-    b.onclick = () => { gtFreq = f; renderGtrends(); };
-    sub.appendChild(b);
-  }
+  renderGtFilterbar();
 
   if(!all.length){
     document.getElementById("gtIndexCard").innerHTML = "";
@@ -310,12 +427,24 @@ function renderGtrends(){
     return;
   }
 
-  // Gesamt-Index (nur ausgewaehlte Suchbegriffe)
+  // Gesamt-Index (nur ausgewaehlte Suchbegriffe) - GANZ OBEN
   const idxAgg = gtAggregate(gtCompositeDaily(gtChecked), gtFreq);
   const idxCard = document.getElementById("gtIndexCard");
-  idxCard.innerHTML = `<h3>Google-Trends-Index (${gtChecked.size} von ${all.length} Suchbegriffen)</h3>` +
-    (idxAgg.length ? gtCardHtml("", idxAgg, null).replace(/<h3>.*?<\/h3>/,"") : `<div class="empty">Keine Suchbegriffe ausgewählt</div>`);
-  if(idxAgg.length) gtDrawChart(idxCard.querySelector("canvas"), idxAgg, "#5b21b6");
+  const periodWord = {daily:"Vortag", weekly:"Vorwoche", monthly:"Vormonat", quarterly:"Vorquartal"}[gtFreq];
+  if(idxAgg.length){
+    const [d,v] = idxAgg[idxAgg.length-1];
+    const chg = gtChangePct(idxAgg);
+    idxCard.innerHTML = `<h3>Google-Trends-Index (${gtChecked.size} von ${all.length} Suchbegriffen)</h3>
+      <div><span class="kpi-val">${fmt(v,1)}</span>
+        <span style="font-size:12px;color:var(--muted)">Index 0–100</span>
+        ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`:""}
+      </div>
+      <canvas height="140"></canvas>
+      <div class="hint">Stand: ${d} · Klick auf einen Punkt springt eine Frequenzstufe tiefer (Quartal→Monat→Woche→Tag) und zoomt auf diesen Zeitraum.</div>`;
+    drawLineChart(idxCard.querySelector("canvas"), idxAgg, "#d7e94a", "Index", gtOnDrillClick(idxAgg));
+  } else {
+    idxCard.innerHTML = `<h3>Google-Trends-Index (${gtChecked.size} von ${all.length} Suchbegriffen)</h3><div class="empty">Keine Daten im gewählten Zeitraum/Auswahl</div>`;
+  }
 
   // Gruppen + Checkboxen
   const groups = {};
@@ -351,9 +480,21 @@ function renderGtrends(){
     const agg = gtAggregate(s.points, gtFreq);
     const card = document.createElement("div"); card.className = "card";
     const src = s.source_url ? `<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>` : s.source;
-    card.innerHTML = gtCardHtml(s.keyword || s.label, agg, src);
+    if(!agg.length){
+      card.innerHTML = `<h3>${s.keyword||s.label}</h3><div class="empty">Keine Daten im Zeitraum</div>`;
+    } else {
+      const [d,v] = agg[agg.length-1];
+      const chg = gtChangePct(agg);
+      card.innerHTML = `<h3>${s.keyword||s.label}</h3>
+        <div><span class="kpi-val">${fmt(v,1)}</span>
+          <span style="font-size:12px;color:var(--muted)">Index 0–100</span>
+          ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${periodWord}</span>`:""}
+        </div>
+        <canvas height="110"></canvas>
+        <div class="src">Stand: ${d}${src?` · Quelle: ${src}`:""}</div>`;
+    }
     grid.appendChild(card);
-    if(agg.length) gtDrawChart(card.querySelector("canvas"), agg, "#1a3c6e");
+    if(agg.length) drawLineChart(card.querySelector("canvas"), agg, "#60a5fa", "Index", gtOnDrillClick(agg));
   }
 }
 
