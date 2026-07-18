@@ -2,10 +2,33 @@
   "dashboard_url": "https://Pascal-pkm.github.io/Retail-Dashboard/",
 
   "hystreet": {
-    "enabled": false,
-    "_hinweis": "NICHT aktivieren, bevor die Freigabe von hystreet vorliegt - siehe COMPLIANCE.md. Aktivierung: enabled=true UND Secret HYSTREET_API_KEY im Repo.",
-    "location_ids": [],
-    "_location_ids_hinweis": "IDs ueber GET https://hystreet.com/api/locations ermitteln, z.B. Koeln Schildergasse."
+    "enabled": true,
+    "_hinweis": "NICHT aktivieren, bevor die Freigabe von hystreet vorliegt bzw. das Restrisiko bewusst akzeptiert ist - siehe COMPLIANCE.md. Aktivierung: enabled=true UND Secret HYSTREET_API_KEY im Repo. Danach nur ueber den Workflow 'Hystreet manuell' bzw. scripts/run_hystreet.py abrufen, NIE per Cron.",
+    "location_ids": [
+      750, 539, 540, 94, 97, 754, 340, 339, 338, 363, 336,
+      610, 611, 612, 616, 615, 614, 613, 617,
+      164,
+      252,
+      143, 354, 84,
+      462, 205, 50, 48, 168, 158, 159, 160, 47, 461, 167,
+      537, 716, 414, 715, 413, 536, 412, 538, 447,
+      807, 814,
+      457, 206,
+      862
+    ],
+    "_location_ids_map": {
+      "_hinweis": "Nur zur Dokumentation (nicht vom Script gelesen) - IDs am 2026-07 ueber hystreet.com/locations (eingeloggter Account) ermittelt. Alle Strassen-Standorte je Stadt sind enthalten.",
+      "Berlin": {"750": "Carl-Schurz-Straße (Süd, Spandau)", "539": "Friedrichstraße (Mitte, Stadtmitte)", "540": "Hackescher Markt", "94": "Kurfürstendamm Nordseite (Ost)", "97": "Kurfürstendamm Südseite (Ost)", "754": "Lankwitzer Straße (Lichterfelde)", "340": "Neue Schönhauser Straße", "339": "Rosenthaler Straße (Süd)", "338": "Schloßstraße (Mitte)", "363": "Tauentzienstraße (West)", "336": "Wilmersdorfer Straße (Mitte)"},
+      "Braunschweig": {"610": "Damm (Ost)", "611": "Friedrich-Wilhelm-Straße", "612": "Hutfiltern (Burgpassage)", "616": "Langer Hof (Mitte)", "615": "Neue Straße (Mitte)", "614": "Poststraße (Mitte)", "613": "Sack (Konrad-Koch-Quartier)", "617": "Schuhstraße (Süd)"},
+      "Dresden": {"164": "Prager Straße (Nord)"},
+      "Flensburg": {"252": "Holm"},
+      "Freiburg": {"143": "Kaiser-Joseph-Straße (Mitte)", "354": "Münsterstraße", "84": "Rathausgasse"},
+      "Köln": {"462": "Breite Straße (Mitte)", "205": "Ehrenstraße (Mitte)", "50": "Ehrenstraße (Ost)", "48": "Hohe Straße (Mitte)", "168": "Hohe Straße (Nord)", "158": "Hohe Straße (Süd)", "159": "Schildergasse (Mitte)", "160": "Schildergasse (Ost)", "47": "Schildergasse (West)", "461": "Severinstraße (Mitte)", "167": "Zeppelinstraße"},
+      "Lüneburg": {"537": "Am Berge", "716": "An den Brodbänken", "414": "An der Münze", "715": "Grapengießerstraße (Ost)", "413": "Grapengießerstraße (Ost/ Alt)", "536": "Große Bäckerstraße", "412": "Kleine Bäckerstraße", "538": "Schröderstraße", "447": "Untere Schrangenstraße"},
+      "Rheine": {"807": "Emsstraße (Mitte)", "814": "Emsstraße (Ost)"},
+      "Rostock": {"457": "Kröpeliner Straße (Ost)", "206": "Kröpeliner Straße (West)"},
+      "Wolfsburg": {"862": "Porschestraße (Mitte)"}
+    }
   },
 
   "google_trends": {
