@@ -45,7 +45,23 @@ Eurostat-Daten dürfen laut Eurostat-Lizenzpolitik (CC BY 4.0-basiert) frei weit
 - **ifo:** Kennzahl aus öffentlicher Pressemitteilung mit Quellenangabe (Zitatrecht/Pressemitteilungscharakter); keine Vervielfältigung ganzer Publikationen.
 - **IR-Berichte:** öffentliche Pflichtveröffentlichungen; wir speichern Links + einzelne Kennzahlen mit Quellenangabe, keine PDF-Weiterverbreitung.
 
-## 5. Freigabe-Checkliste vor Produktivbetrieb
+## 5. Radverkehr-Dauerzählstellen (5 Regionen, Stand 07/2026) — ✅ unkritisch mit Namensnennung
+
+Nutzerentscheidung 2026-07: Da Hystreet pausiert ist und Destatis' eigene Passantenfrequenz-Erhebung zum 31.12.2025 eingestellt wurde, wird als bundesweiter **Näherungswert** (ausdrücklich KEINE Fußgängerzahlen) auf offene Fahrrad-Dauerzählstellen zurückgegriffen. Alle fünf verwendeten Regionen wurden einzeln auf Format und Lizenz geprüft:
+
+| Region | Quelle | Lizenz |
+|---|---|---|
+| Baden-Württemberg | MobiData BW (mobidata-bw.de) | dl-de/by-2.0 |
+| Hamburg | Transparenzportal Hamburg / api.hamburg.de | dl-de/by-2.0 |
+| Leipzig | Open Data Portal Leipzig (Geodienste) | dl-de/by-2.0 |
+| München | Open Data Portal München (CKAN + Geoportal) | dl-de/by-2.0 |
+| Münster (NRW) | opendata.stadt-muenster.de / GitHub-Repo od-ms | dl-de/by-2.0 |
+
+Alle fünf stehen unter der **Datenlizenz Deutschland – Namensnennung – 2.0**, identisch zu Destatis/Eurostat (siehe oben): Vervielfältigung, Verbreitung, Veröffentlichung und kommerzielle Nutzung sind mit Quellenvermerk ausdrücklich erlaubt. Keine der fünf Quellen hat ein Hystreet-artiges Verbot automatisierter Abfrage; alle sind als offene Maschinen-Downloads (CSV/GeoJSON/API) konzipiert. Quellenvermerk je Region ist im Dashboard bei jeder Kennzahl/jedem Kartenmarker verlinkt.
+
+**Bewusst ausgeklammert: Kiel/Schleswig-Holstein.** Der einzige gefundene Zugang läuft über die Mobilithek (bundesweiter Mobilitätsdaten-Marktplatz) und erfordert eine Registrierung/Login — kein anonymer offener Zugang wie bei den fünf genutzten Regionen. Auf Nutzerentscheidung daher vorerst nicht eingebunden; kann bei Bedarf nach Registrierung ergänzt werden (`scripts/sources/radverkehr.py` ist dafür bewusst pro Region erweiterbar aufgebaut).
+
+## 6. Freigabe-Checkliste vor Produktivbetrieb
 
 - [ ] Hystreet: bewusste Entscheidung getroffen (Zustimmung eingeholt ODER Restrisiko akzeptiert ODER Modul bleibt deaktiviert)
 - [ ] Newsletter-Empfänger (`NEWSLETTER_TO`) geprüft — nur eigene, private Adresse(n) hinterlegt

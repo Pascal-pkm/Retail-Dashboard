@@ -33,6 +33,58 @@
     }
   },
 
+  "radverkehr": {
+    "_hinweis": "Radverkehr-Dauerzaehlstellen (Fahrrad) als bundesweiter Naeherungswert fuer Innenstadt-/Wegefrequenzen. AUSDRUECKLICH KEINE Fussgaengerzahlen - dient nur der Tendenzeinschaetzung (siehe Nutzerentscheidung 2026-07). Deckt 5 verifiziert frei zugaengliche Regionen ab (Stand 07/2026); Kiel/Schleswig-Holstein bewusst ausgeklammert, da dort nur ein Mobilithek-Zugang mit Registrierung gefunden wurde. Weitere Regionen koennen spaeter nach Einzelpruefung ergaenzt werden - dazu einfach einen neuen Eintrag unter 'regions' anlegen und eine passende _fetch_<region>()-Funktion in scripts/sources/radverkehr.py schreiben.",
+    "regions": {
+      "bw": {
+        "name": "Baden-Württemberg (MobiData BW)",
+        "bundesland": "Baden-Württemberg",
+        "source": "mobidata-bw.de",
+        "source_url": "https://www.mobidata-bw.de/dataset/fahrradzaehler-bw",
+        "license": "dl-de/by-2.0",
+        "csv_url": "https://mobidata-bw.de/daten/eco-counter/v2/fahrradzaehler_tageswerten.csv"
+      },
+      "hamburg": {
+        "name": "Hamburg (Transparenzportal)",
+        "bundesland": "Hamburg",
+        "source": "api.hamburg.de",
+        "source_url": "https://suche.transparenz.hamburg.de/dataset/dauerzaehlstellen-rad-hamburg8",
+        "license": "dl-de/by-2.0",
+        "items_url": "https://api.hamburg.de/datasets/v1/dauerzaehlstellen_rad/collections/dauerzaehlstellen_rad/items?f=json"
+      },
+      "leipzig": {
+        "name": "Leipzig (Open Data Portal)",
+        "bundesland": "Sachsen",
+        "source": "opendata.leipzig.de",
+        "source_url": "https://opendata.leipzig.de/dataset/dauerzahlstellen-radverkehr-stationen-stadt-leipzig",
+        "license": "dl-de/by-2.0",
+        "locations_url": "https://geodienste.leipzig.de/l3/OpenData/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=OpenData%3Aradverkehr_dauerzaehlstelle_standort_statisch&outputFormat=csv",
+        "data_url": "https://geodienste.leipzig.de/l3/OpenData/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=OpenData%3Aradverkehr_dauerzaehlstelle_anzahl_tag_zeitreihe&outputFormat=csv",
+        "utm_zone": 33
+      },
+      "muenchen": {
+        "name": "München (Open Data Portal)",
+        "bundesland": "Bayern",
+        "source": "opendata.muenchen.de",
+        "source_url": "https://opendata.muenchen.de/dataset/opendata_raddauerzaehlstellen",
+        "license": "dl-de/by-2.0",
+        "locations_url": "https://geoportal.muenchen.de/geoserver/mor_wfs/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=mor_wfs:raddauerzaehlstellen&outputFormat=csv",
+        "ckan_api": "https://opendata.muenchen.de/api/3/action/package_show",
+        "_hinweis": "CKAN-API benoetigt Referer-Header (sonst 503 vom WAF) - siehe common.http_get Aufruf mit headers."
+      },
+      "nrw_muenster": {
+        "name": "Münster (NRW, Open.NRW / Stadt Münster)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "opendata.stadt-muenster.de / GitHub od-ms",
+        "source_url": "https://opendata.stadt-muenster.de/dataset/verkehrsz%C3%A4hlung-fahrradverkehr-tagesaktuelle-daten",
+        "license": "dl-de/by-2.0",
+        "locations_url": "https://opendata.stadt-muenster.de/sites/default/files/fahrradzaehl-standorte_0.geojson",
+        "site_index_url": "https://raw.githubusercontent.com/od-ms/radverkehr-zaehlstellen/main/site_min.json",
+        "csv_base": "https://raw.githubusercontent.com/od-ms/radverkehr-zaehlstellen/main"
+      }
+    }
+  },
+
   "google_trends": {
     "keywords": ["Zalando", "Zara", "H&M", "Sneaker", "Abendkleid"],
     "geo": "DE",

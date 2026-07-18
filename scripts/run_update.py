@@ -14,11 +14,12 @@ from common import load_config, load_data, merge_errors, now_iso, save_data
 
 from sources import (destatis_dashboard, eurostat_retail, genesis_retail,
                      google_trends, ifo_hde, ir_reports, pinterest_trends,
-                     stocks)
+                     radverkehr, stocks)
 
 FETCHERS = {
     "daily": [("google_trends", google_trends.fetch),
-              ("stocks", stocks.fetch)],
+              ("stocks", stocks.fetch),
+              ("radverkehr", radverkehr.fetch)],
     "weekly": [("destatis_dashboard", destatis_dashboard.fetch),
                ("pinterest_trends", pinterest_trends.fetch)],
     "monthly": [("genesis", genesis_retail.fetch),

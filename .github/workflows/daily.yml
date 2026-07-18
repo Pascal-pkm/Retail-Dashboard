@@ -24,7 +24,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Daten abrufen (täglich - Google Trends, Aktien; Hystreet läuft separat & manuell)
+      - name: Daten abrufen (täglich - Google Trends, Aktien, Radverkehr-Zählstellen; Hystreet läuft separat & manuell)
         run: python scripts/run_update.py daily
 
       - name: data.json committen

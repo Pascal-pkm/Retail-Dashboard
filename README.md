@@ -18,6 +18,7 @@ Sammelt öffentliche Retail-/Mode-Branchen-KPIs in vier Frequenzen (täglich, w�
 | täglich | Hystreet-Passantenfrequenzen | Standort | **deaktiviert per Default; nur manuell startbar, siehe COMPLIANCE.md** |
 | täglich | Google Trends (pytrends) | Branche | inoffiziell, Index 0–100 |
 | täglich | Aktienkurse (yfinance/Stooq) | Konzern | Zalando, adidas, Puma, Inditex, H&M (About You seit 2025 Teil von Zalando, Ticker delisted) |
+| täglich | Radverkehr-Dauerzählstellen (BW, Hamburg, Leipzig, München, Münster/NRW) | Region + Standort (Karte) | Näherungswert für Wegefrequenzen, **keine Fußgängerzahlen** – siehe COMPLIANCE.md Abschnitt 5 |
 | wöchentlich | Destatis Dashboard Deutschland (Tile-API) | Branche | dl-de/by-2-0 |
 | wöchentlich | Pinterest Trends | Branche | Best-Effort, experimentell |
 | monatlich | GENESIS 45212-0001 (inkl. Versand-/Internethandel) | Branche | Secrets nötig |
@@ -26,6 +27,8 @@ Sammelt öffentliche Retail-/Mode-Branchen-KPIs in vier Frequenzen (täglich, w�
 | quartalsweise | IR-Berichte (Zalando inkl. About You, Inditex, H&M) | **Konzern** | GMV, aktive Kunden, AOV etc.; Inditex nur Link (JS-Seite) |
 
 **Wichtig:** Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort/Outlet sind **nicht öffentlich verfügbar** (nur GfK/NIQ, EHI, BTE als Bezahl-Panels). Die Quartals-KPIs aus IR-Berichten sind Konzernwerte und werden im Dashboard/Newsletter entsprechend gekennzeichnet.
+
+**Radverkehr als Frequenz-Proxy:** Nachdem Hystreet pausiert ist (siehe unten) und Destatis' Passantenfrequenz-Erhebung zum 31.12.2025 eingestellt wurde, nutzt das Dashboard ersatzweise offene Fahrrad-Dauerzählstellen aus 5 Regionen (Baden-Württemberg, Hamburg, Leipzig, München, Münster/NRW) als groben, deutschlandweiten Tendenz-Indikator für Wegefrequenzen – **ausdrücklich keine Fußgängerzahlen**. Ein neuer Dashboard-Tab „Karte (Radverkehr)" zeigt alle Zählstellen auf einer Deutschlandkarte (Leaflet/OpenStreetMap), zusätzlich gibt es je Region eine Tagessummen-Serie im normalen Frequenz-Grid. Weitere Regionen lassen sich in `config.json → radverkehr.regions` + einer neuen `_fetch_<region>()`-Funktion in `scripts/sources/radverkehr.py` ergänzen; Details zur Quellenprüfung in COMPLIANCE.md Abschnitt 5.
 
 ## Einrichtung
 
@@ -59,10 +62,10 @@ python scripts/newsletter.py daily      # schreibt newsletter_daily_preview.html
 config/config.json          Keywords, Ticker, Tabellen, Schwellen, Feature-Gates
 scripts/run_update.py       Einstiegspunkt je Frequenz (ohne Hystreet)
 scripts/run_hystreet.py     separater, nur manuell gestarteter Hystreet-Lauf
-scripts/sources/            ein Modul pro Datenquelle, je einzeln abgesichert
+scripts/sources/            ein Modul pro Datenquelle, je einzeln abgesichert (inkl. radverkehr.py, 5 Regionen)
 scripts/commentary.py       regelbasierte Kommentierung
 scripts/newsletter.py       HTML-Newsletter + Gmail-SMTP-Versand (privat)
-docs/index.html             Dashboard (Chart.js), liest docs/data.json
+docs/index.html             Dashboard (Chart.js + Leaflet-Kartenansicht), liest docs/data.json
 docs/data.json               Datenbasis (von Actions committet)
 .github/workflows/          daily / weekly / monthly / quarterly / hystreet-manual (kein Cron)
 COMPLIANCE.md                Lizenz-/AGB-Zusammenfassung + Freigabe-Checkliste

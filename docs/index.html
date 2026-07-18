@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Retail-KPI-Dashboard – Mode &amp; Einzelhandel</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root{--blue:#1a3c6e;--bg:#f5f6f8;--card:#fff;--muted:#6b7280;}
   *{box-sizing:border-box;margin:0}
@@ -27,6 +29,7 @@
   .badge.standort{background:#dcfce7;color:#166534}
   .badge.konzern{background:#fee2e2;color:#991b1b}
   .badge.branche{background:#dbeafe;color:#1e40af}
+  .badge.region{background:#ede9fe;color:#5b21b6}
   .kpi-val{font-size:20px;font-weight:700}
   .kpi-chg{font-size:13px;margin-left:8px}
   .up{color:#15803d}.down{color:#b91c1c}
@@ -37,6 +40,11 @@
   .empty{padding:40px;text-align:center;color:var(--muted)}
   footer{padding:24px 28px;font-size:12px;color:var(--muted);max-width:1200px;margin:auto}
   .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:13px;color:#7c2d12;margin-bottom:18px}
+  #mapview{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-top:4px}
+  #map{height:560px;border-radius:8px;margin-top:10px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+  .legend span.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .leaflet-popup-content{font-size:13px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -52,24 +60,48 @@
     <span class="badge konzern">Konzernebene</span>
     <span class="badge branche">Branche/Gesamtmarkt</span>.
     Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort sind <em>nicht öffentlich verfügbar</em>;
-    die nächste Annäherung sind konzernweite Quartalskennzahlen (z.&nbsp;B. AOV) aus IR-Berichten.</div>
+    die nächste Annäherung sind konzernweite Quartalskennzahlen (z.&nbsp;B. AOV) aus IR-Berichten.
+    Die <span class="badge region">Regional-Index</span>-Kennzahlen basieren auf Fahrrad-Dauerzählstellen
+    (nicht Fußgänger!) in 5 Regionen und dienen nur als grober Tendenz-Proxy für Wegefrequenzen.</div>
   <div class="comments" id="comments" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="ir"></div>
   <div class="errors" id="errors" hidden></div>
+  <div id="mapview" hidden>
+    <h2 style="font-size:15px;color:var(--blue)">Radverkehr-Zählstellen (Tendenz-Proxy für Wegefrequenzen)</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">Fahrrad-Dauerzählstellen aus 5 frei zugänglichen Regionen (Baden-Württemberg, Hamburg, Leipzig, München, Münster/NRW).
+      Farbe = Region, Größe = zuletzt gemeldeter Tageswert. <strong>Kein Fußgänger-Proxy</strong>, sondern Radverkehr – als grober Trendindikator zu verstehen.</p>
+    <div id="map"></div>
+    <div class="legend" id="mapLegend"></div>
+  </div>
 </main>
 <footer id="footer"></footer>
 
 <script>
 const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
-const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt"};
-let DATA = null, active = "daily", charts = [];
+const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt", region:"Regional-Index (Radverkehr-Proxy)"};
+const REGION_COLOR = {bw:"#1a3c6e", hamburg:"#b91c1c", leipzig:"#15803d", muenchen:"#c2410c", nrw_muenster:"#7c3aed"};
+const REGION_LABEL = {bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)"};
+let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
 
 const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
 
 function render(){
   charts.forEach(c=>c.destroy()); charts=[];
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.f===active));
+
+  const isMap = active === "map";
+  document.getElementById("mapview").hidden = !isMap;
+  document.getElementById("grid").hidden = isMap;
+  document.getElementById("comments").hidden = isMap || !(DATA.commentary?.[active]?.items || []).length;
+  document.getElementById("ir").hidden = isMap;
+  document.getElementById("errors").hidden = isMap || !(DATA.errors?.[active]||[]).length;
+  if(isMap){
+    document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.radverkehr_stations||{}).length} · Datenstand je Region siehe Popup`;
+    renderMap();
+    return;
+  }
+
   const upd = DATA.meta?.updated?.[active];
   document.getElementById("meta").textContent = upd ? `Letzte Aktualisierung (${active}): ${new Date(upd).toLocaleString("de-DE")}` : "Noch kein Datenlauf für diese Frequenz.";
 
@@ -119,6 +151,41 @@ function render(){
   ebox.innerHTML = "<strong>Hinweise des letzten Laufs:</strong><br>"+errs.map(e=>`${e.source}: ${e.message}`).join("<br>");
 }
 
+function renderMap(){
+  const stations = DATA.radverkehr_stations || {};
+  if(!leafletMap){
+    leafletMap = L.map("map").setView([51.2, 10.4], 6);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende',
+      maxZoom: 18,
+    }).addTo(leafletMap);
+  }
+  mapMarkers.forEach(m=>leafletMap.removeLayer(m)); mapMarkers=[];
+
+  const vals = Object.values(stations).map(s=>(s.points||[]).length ? s.points[s.points.length-1][1] : 0).filter(v=>v>0);
+  const maxVal = vals.length ? Math.max(...vals) : 1;
+
+  for(const [key,s] of Object.entries(stations)){
+    if(s.lat==null || s.lon==null) continue;
+    const pts = s.points||[];
+    const last = pts.length ? pts[pts.length-1] : null;
+    const color = REGION_COLOR[s.region] || "#374151";
+    const radius = last ? 4 + 10*Math.sqrt(Math.max(last[1],0)/maxVal) : 4;
+    const marker = L.circleMarker([s.lat,s.lon], {
+      radius, color, fillColor: color, fillOpacity:.55, weight:1.5,
+    }).addTo(leafletMap);
+    marker.bindPopup(`<strong>${s.name}</strong><br>${s.bundesland||""}<br>` +
+      (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})` : "Keine Werte") +
+      `<br><small>Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</small>`);
+    mapMarkers.push(marker);
+  }
+  setTimeout(()=>leafletMap.invalidateSize(), 50);
+
+  const legend = document.getElementById("mapLegend");
+  legend.innerHTML = Object.entries(REGION_LABEL).map(([k,label])=>
+    `<span><span class="dot" style="background:${REGION_COLOR[k]}"></span>${label}</span>`).join("");
+}
+
 function init(){
   const nav=document.getElementById("tabs");
   for(const [f,label] of FREQS){
@@ -126,6 +193,9 @@ function init(){
     b.onclick=()=>{active=f;render();};
     nav.appendChild(b);
   }
+  const mapBtn=document.createElement("button"); mapBtn.textContent="Karte (Radverkehr)"; mapBtn.dataset.f="map";
+  mapBtn.onclick=()=>{active="map";render();};
+  nav.appendChild(mapBtn);
   document.getElementById("footer").innerHTML =
     `Quellen u.&nbsp;a.: Statistisches Bundesamt (Destatis) – Datenlizenz Deutschland – Namensnennung – 2.0
      (<a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>) · Eurostat · Google Trends ·
