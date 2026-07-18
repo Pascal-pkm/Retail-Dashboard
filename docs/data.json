@@ -1,7 +1,7 @@
 {
  "commentary": {
   "daily": {
-   "generated": "2026-07-18T18:22:04+00:00",
+   "generated": "2026-07-18T18:27:39+00:00",
    "items": [
     {
      "change_pct": -8.7,
@@ -195,7 +195,7 @@
   "project": "Retail KPI Dashboard",
   "updated": {
    "daily": "2026-07-18T18:22:04+00:00",
-   "hystreet_manual": "2026-07-18T17:35:58+00:00",
+   "hystreet_manual": "2026-07-18T18:27:39+00:00",
    "monthly": "2026-07-18T16:39:35+00:00",
    "quarterly": "2026-07-18T16:42:08+00:00",
    "weekly": "2026-07-18T16:43:20+00:00"
@@ -3821,6 +3821,48 @@
    "source": "Google Trends (via pytrends, inoffiziell)",
    "source_url": "https://trends.google.de",
    "unit": "Index 0-100"
+  },
+  "hystreet_148": {
+   "frequency": "daily",
+   "label": "Passantenfrequenz Limburg Werner-Senger-Straße",
+   "points": [
+    [
+     "2026-07-09",
+     12592.0
+    ],
+    [
+     "2026-07-10",
+     14519.0
+    ],
+    [
+     "2026-07-11",
+     2556.0
+    ],
+    [
+     "2026-07-12",
+     12908.0
+    ],
+    [
+     "2026-07-13",
+     12345.0
+    ],
+    [
+     "2026-07-14",
+     12849.0
+    ],
+    [
+     "2026-07-15",
+     12333.0
+    ],
+    [
+     "2026-07-16",
+     12707.0
+    ]
+   ],
+   "scope": "standort",
+   "source": "hystreet.com",
+   "source_url": "https://hystreet.com",
+   "unit": "Passanten/Tag"
   },
   "ifo_geschaeftsklima": {
    "frequency": "monthly",
