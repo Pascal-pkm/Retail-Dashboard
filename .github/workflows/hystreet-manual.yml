@@ -15,6 +15,9 @@ on:
 permissions:
   contents: write
 
+env:
+  PYTHONUNBUFFERED: "1"   # Python-Ausgaben sofort in den Actions-Logs sichtbar, nicht erst am Ende gepuffert
+
 jobs:
   update:
     runs-on: ubuntu-latest
