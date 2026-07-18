@@ -4,7 +4,9 @@
   "hystreet": {
     "enabled": true,
     "_hinweis": "NICHT aktivieren, bevor die Freigabe von hystreet vorliegt bzw. das Restrisiko bewusst akzeptiert ist - siehe COMPLIANCE.md. Aktivierung: enabled=true UND Secret HYSTREET_API_KEY im Repo. Danach nur ueber den Workflow 'Hystreet manuell' bzw. scripts/run_hystreet.py abrufen, NIE per Cron.",
-    "location_ids": [
+    "_zugriffs_hinweis": "WICHTIG: Laut Hystreet-Profil (Stand 2026-07) gilt der API-Token nur beispielhaft fuer den Standort Limburg (ID 148) oder explizit vereinbarte Standorte - NICHT fuer alle 379 Standorte, die auf der Website sichtbar sind. Deshalb aktuell 404 bei den 10-Staedte-IDs. location_ids ist testweise auf Limburg gesetzt; die volle Liste liegt unveraendert in target_location_ids_10_staedte und kann nach Rueckmeldung von hystreet (Kontaktformular im Profil) wieder eingesetzt werden.",
+    "location_ids": [148],
+    "target_location_ids_10_staedte": [
       750, 539, 540, 94, 97, 754, 340, 339, 338, 363, 336,
       610, 611, 612, 616, 615, 614, 613, 617,
       164,
