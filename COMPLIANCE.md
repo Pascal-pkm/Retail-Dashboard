@@ -19,6 +19,8 @@ Die AGB des kostenlosen Angebots **„FREE"** (das über die kostenlose Registri
 - Ziff. 8.1.5 verbietet „automatisierte Abfrage ... durch Roboter bzw. Softwaretools" – das bezieht sich auf die Methode (ein Script ruft die API auf), nicht auf den Auslöser. Ob per Cron oder per Knopfdruck gestartet, technisch bleibt es ein Softwaretool statt manueller Browser-Nutzung.
 - Ziff. 8.1.2/8.1.3 verbieten Veröffentlichung ohne Zustimmung. Repo und GitHub-Pages-Seite dieses Projekts sind **öffentlich**; landen Hystreet-Daten in `docs/data.json`, gelten sie als veröffentlicht — unabhängig davon, dass dein Newsletter privat bleibt.
 
+**Historien-Backfill (2024–heute für Vorjahresvergleiche):** Der Workflow unterstützt optional einen einmaligen Backfill (Eingabefeld „backfill_from"), der pro Standort mehrere Anfragen in 366-Tage-Blöcken stellt (bei 49 Standorten ab 2024-01-01 rund 150 Anfragen in einem Durchgang, mit kurzer Pause zwischen den Requests). Das ist weiterhin ein einzelner, von dir manuell ausgelöster Lauf — aber ein deutlich höheres Anfragevolumen als das normale 8-Tage-Update. Die oben genannten Restrisiken (Ziff. 8.1.5, 8.1.2/8.1.3) gelten dafür unverändert bzw. verstärkt, da mehr Daten auf einmal abgefragt und veröffentlicht würden.
+
 Falls du dieses Restrisiko vermeiden willst, sind die sauberen Alternativen: (a) das Repo/die Pages-Seite auf privat stellen, (b) Hystreet-Daten in eine nicht committete/private Datei statt `docs/data.json` schreiben lassen, oder (c) die Freigabe bei hystreet einholen. Sag Bescheid, falls einer dieser Wege gewünscht ist — aktuell ist bewusst Variante „öffentliches Repo, nur manuell statt automatisch" umgesetzt.
 
 ## 2. Destatis (GENESIS-Online & Dashboard Deutschland) — ✅ unkritisch mit Namensnennung

@@ -7,6 +7,10 @@ name: Hystreet manuell (Passantenfrequenzen)
 on:
   workflow_dispatch:
     inputs:
+      backfill_from:
+        description: "Nur fuer einmaligen Backfill: Datum ab dem Historie nachgeladen wird (YYYY-MM-DD, z.B. 2024-01-01). Leer lassen fuer normales Update (nur letzte 8 Tage)."
+        type: string
+        default: ""
       newsletter:
         description: "Nach dem Abruf auch den (privaten) Newsletter versenden?"
         type: boolean
@@ -34,6 +38,7 @@ jobs:
       - name: Hystreet-Daten abrufen
         env:
           HYSTREET_API_KEY: ${{ secrets.HYSTREET_API_KEY }}
+          HYSTREET_BACKFILL_FROM: ${{ inputs.backfill_from }}
         run: python scripts/run_hystreet.py
 
       - name: data.json committen
@@ -41,7 +46,7 @@ jobs:
           git config user.name "kpi-bot"
           git config user.email "actions@users.noreply.github.com"
           git add docs/data.json
-          git diff --cached --quiet || git commit -m "Hystreet-Update (manuell) $(date -u +%F)"
+          git diff --cached --quiet || git commit -m "Hystreet-Update (manuell${{ inputs.backfill_from && format(', Backfill ab {0}', inputs.backfill_from) || '' }}) $(date -u +%F)"
           git push
 
       - name: Newsletter versenden (privat, nur an dich)
