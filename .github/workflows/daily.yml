@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "23 5 * * *"   # 05:23 UTC = 06:23/07:23 DE
   workflow_dispatch:
+    inputs:
+      stocks_backfill_period:
+        description: "Nur fuer einmaligen Backfill: yfinance-period fuer Aktienkurse (z.B. 2y, 5y, max). Leer lassen fuer normales Update (nur letzte 10 Handelstage)."
+        type: string
+        default: ""
+      gtrends_backfill_timeframe:
+        description: "Nur fuer einmaligen Backfill: pytrends-timeframe fuer Google Trends (z.B. 'today 5-y'). Leer lassen fuer normales Update (nur letzte 30 Tage aus dem 3-Monats-Fenster)."
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -25,6 +34,9 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Daten abrufen (täglich - Google Trends, Aktien, Radverkehr-Zählstellen; Hystreet läuft separat & manuell)
+        env:
+          STOCKS_BACKFILL_PERIOD: ${{ inputs.stocks_backfill_period }}
+          GTRENDS_BACKFILL_TIMEFRAME: ${{ inputs.gtrends_backfill_timeframe }}
         run: python scripts/run_update.py daily
 
       - name: data.json committen
