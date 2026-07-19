@@ -16,6 +16,10 @@
     --grid-line:#3f464d;
   }
   *{box-sizing:border-box;margin:0}
+  [hidden]{display:none!important}
+  /* Ohne !important gewinnt z.B. .grid{display:grid} gegen [hidden]{display:none} bei
+     gleicher Spezifitaet (letzte Regel im Stylesheet zaehlt) - Elemente mit hidden-Attribut
+     UND eigener display-Regel (.grid, evtl. kuenftig weitere) blieben sonst sichtbar. */
   body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
   header{background:var(--bg2);color:var(--text);padding:22px 28px;border-bottom:3px solid var(--accent)}
   header h1{font-size:22px;font-weight:800;color:var(--accent);letter-spacing:.2px}
@@ -220,6 +224,12 @@ function render(){
   document.getElementById("comments").hidden = isMap || isFg || isGt || !(DATA.commentary?.[active]?.items || []).length;
   document.getElementById("ir").hidden = isMap || isFg || isGt;
   document.getElementById("errors").hidden = isMap || isFg || isGt || !(DATA.errors?.[active]||[]).length;
+  if(isMap || isFg || isGt){
+    // Karte/Fussgaenger/Google-Trends haben ihre eigene Darstellung - Inhalte der
+    // generischen Kennzahlen-Ansicht (vorheriger Tab) nicht stehen lassen.
+    document.getElementById("grid").innerHTML = "";
+    document.getElementById("ir").innerHTML = "";
+  }
   if(isMap){
     document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.radverkehr_stations||{}).length} · Datenstand je Region siehe Popup`;
     renderRvFilterbar();
