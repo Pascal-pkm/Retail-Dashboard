@@ -193,7 +193,12 @@ def _fetch_bw(data, stations, region_cfg, errors):
 # ------------------------------------------------------------ Hamburg -----
 
 def _fetch_hamburg(data, stations, region_cfg, errors):
-    j = http_get(region_cfg["items_url"], timeout=REQUEST_TIMEOUT, retries=REQUEST_RETRIES).json()
+    # retries/backoff bewusst hoeher als der Modul-Standard (siehe Kommentar bei
+    # HTTP_REFRESH_RETRIES weiter unten) - 07/2026 vereinzelt "Network is
+    # unreachable"-Fehler beobachtet, die sich als kurzzeitige Netzwerk-Aussetzer
+    # herausstellten (api.hamburg.de war Sekunden spaeter wieder normal
+    # erreichbar); mehr Versuche mit laengeren Pausen fangen das ab.
+    j = http_get(region_cfg["items_url"], timeout=REQUEST_TIMEOUT, retries=5, backoff=6).json()
     fresh_daily, fresh_weekly = {}, {}
     for feat in j.get("features", []):
         props = feat.get("properties", {})
@@ -494,7 +499,7 @@ def _duess_year_resources(region_cfg, year, errors):
     try:
         r = http_get(
             region_cfg["package_show_url"], params={"id": package_id},
-            timeout=REQUEST_TIMEOUT, retries=2, backoff=3,
+            timeout=REQUEST_TIMEOUT, retries=3, backoff=5,
         )
         pkg = r.json()["result"]
     except Exception:  # noqa: BLE001
@@ -519,20 +524,27 @@ def _fetch_duesseldorf(data, stations, region_cfg, errors):
     (opendata.duesseldorf.de, DL-DE-BY-2.0). Jahresarchive erscheinen erst
     Monate nach Jahresende, daher aktuelles + Vorjahr abfragen; stuendliche
     Werte (Zeit;<Station[ IN;<Station> OUT];Symbol Wetter;Temperatur;Regen)
-    werden pro Tag aufsummiert."""
+    werden pro Tag aufsummiert.
+
+    WICHTIG (gefunden 07/2026): opendata.duesseldorf.de und offenedaten-koeln.de
+    (siehe _fetch_koeln) liegen auf derselben IP (194.8.223.72) - ein kleines,
+    gemeinsam gehostetes Portal. Zusammen erzeugen beide Fetcher in einem Lauf
+    ~60+ Anfragen an denselben Host kurz hintereinander, was einmal zu einer
+    Serie von "Connection refused"-Fehlern bei BEIDEN Staedten im selben Lauf
+    fuehrte (vermutlich eine Anti-Abuse-Drossel des kleinen Portals). Da ein
+    abgelehnter Verbindungsaufbau fast sofort fehlschlaegt (kein Warten auf
+    einen vollen Timeout wie bei Rostock), kosten mehr Versuche/laengere
+    Pausen kaum zusaetzliche Laufzeit, geben einer kurzzeitigen Drossel aber
+    Zeit zum Abklingen."""
     locs = _duess_station_locations(region_cfg, errors)
     today = date.today()
     years = sorted({today.year, today.year - 1})
     fresh = {}
     for year in years:
         for station_name, url in _duess_year_resources(region_cfg, year, errors):
-            # Kleine Pause zwischen Requests: opendata.duesseldorf.de ist ein kleines
-            # Drupal-Portal, das bei ~20-45 schnell aufeinanderfolgenden Anfragen aus
-            # der GitHub-Actions-IP-Range mit Verbindungs-Timeouts reagiert hat
-            # (verifiziert 07/2026 durch gemeldete Fehlerhäufung im taeglichen Lauf).
-            time.sleep(0.4)
+            time.sleep(0.8)
             try:
-                r = http_get(url, timeout=REQUEST_TIMEOUT, retries=2, backoff=3)
+                r = http_get(url, timeout=REQUEST_TIMEOUT, retries=3, backoff=5)
                 rows = list(csv.reader(io.StringIO(r.content.decode("utf-8-sig")), delimiter=";"))
             except Exception as e:  # noqa: BLE001
                 errors.append((SOURCE_MODULE, f"duesseldorf {year} {station_name}: {e}"))
@@ -595,7 +607,7 @@ def _koeln_year_csv_url(region_cfg, year, errors):
     try:
         r = http_get(
             region_cfg["package_show_url"], params={"id": f"{region_cfg['package_id_prefix']}{year}"},
-            timeout=REQUEST_TIMEOUT, retries=2, backoff=3,
+            timeout=REQUEST_TIMEOUT, retries=3, backoff=5,
         )
         pkg = r.json()["result"]
     except Exception:  # noqa: BLE001
@@ -623,15 +635,16 @@ def _fetch_koeln(data, stations, region_cfg, errors):
     fresh = {}
     current_year = date.today().year
     for year in range(region_cfg.get("first_year", 2010), current_year + 1):
-        # Kleine Pause zwischen Requests - siehe Kommentar in _fetch_duesseldorf,
-        # govdata.de + offenedaten-koeln.de zeigten dasselbe Timeout-Muster bei
-        # ~17 schnell aufeinanderfolgenden Jahrgangs-Anfragen.
-        time.sleep(0.3)
+        # Kleine Pause zwischen Requests - siehe ausfuehrlicher Kommentar in
+        # _fetch_duesseldorf: offenedaten-koeln.de liegt auf derselben IP wie
+        # opendata.duesseldorf.de, kombiniert erzeugen beide Fetcher genug
+        # Anfragen an denselben Host, um dessen Anti-Abuse-Drossel auszuloesen.
+        time.sleep(0.6)
         url = _koeln_year_csv_url(region_cfg, year, errors)
         if not url:
             continue
         try:
-            raw = http_get(url, timeout=REQUEST_TIMEOUT, retries=2, backoff=3).content
+            raw = http_get(url, timeout=REQUEST_TIMEOUT, retries=3, backoff=5).content
             try:
                 text = raw.decode("utf-8-sig")
             except UnicodeDecodeError:

@@ -49,7 +49,21 @@ def save_data(data: dict) -> None:
 
 
 def http_get(url, *, headers=None, params=None, retries=3, timeout=40, backoff=5):
-    """GET mit Retry und User-Agent. Wirft nach letztem Versuch."""
+    """GET mit Retry und User-Agent. Wirft nach letztem Versuch.
+
+    Retry-Verhalten bewusst nach Fehlerart unterschieden (07/2026 gefunden bei
+    Koeln/Duesseldorf: viele Aufrufe klaeren nur, ob ein Jahrgang/eine Ressource
+    ueberhaupt existiert, und bekommen dafuer ganz regulaer ein HTTP 404 -
+    das mit Backoff zu wiederholen bringt nie ein anderes Ergebnis und hat bei
+    Koeln allein durch die vielen nicht vorhandenen Jahrgaenge Minuten an
+    Laufzeit verschwendet):
+      - 429 (Rate-Limit): mit laengerem Backoff erneut versuchen (wie bisher).
+      - sonstiger 4xx-Fehler (z.B. 404 Not Found, 403 Forbidden): SOFORT
+        weiterwerfen, kein Retry - eine falsche/fehlende Ressource wird durch
+        Wiederholen nicht richtig.
+      - alles andere (Verbindungsfehler, Timeout, 5xx-Serverfehler): wie
+        bisher mit Backoff erneut versuchen, da das transiente Probleme sind.
+    """
     h = {"User-Agent": USER_AGENT}
     if headers:
         h.update(headers)
@@ -62,6 +76,12 @@ def http_get(url, *, headers=None, params=None, retries=3, timeout=40, backoff=5
                 continue
             r.raise_for_status()
             return r
+        except requests.exceptions.HTTPError as e:
+            if 400 <= e.response.status_code < 500 and e.response.status_code != 429:
+                raise  # Client-Fehler (404/403/...) - kein Retry, sofort weiterwerfen
+            last = e
+            if attempt < retries:
+                time.sleep(backoff * attempt)
         except Exception as e:  # noqa: BLE001
             last = e
             if attempt < retries:
