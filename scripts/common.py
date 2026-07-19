@@ -1,7 +1,7 @@
 """Gemeinsame Helfer: data.json-Verwaltung, HTTP mit Retry, Fehlerprotokoll."""
 import json
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -123,3 +123,70 @@ def fmt_de(x, digits=1):
     """Zahl im deutschen Format."""
     s = f"{x:,.{digits}f}"
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# --- Bucket-Aggregation (Python-Portierung der gleichnamigen JS-Funktionen aus
+# docs/index.html: gtBucketKey/rvAggregateSum/rvBucketKeyLastYear/rvYoY/gtAggregate).
+# Damit rechnet der Newsletter fuer weekly/monthly/quarterly exakt dieselben
+# Buckets/YoY-Vergleiche wie der Karte-/Fussgaenger-/Google-Trends-Tab auf der
+# Website - keine zweite, potenziell abweichende Aggregationslogik.
+
+def bucket_key(date_str: str, freq: str) -> str:
+    if freq == "daily":
+        return date_str
+    d = date.fromisoformat(date_str)
+    if freq == "weekly":
+        monday = d - timedelta(days=d.weekday())  # weekday(): 0=Montag, passt zur JS-Logik
+        return monday.isoformat()
+    if freq == "monthly":
+        return date_str[:7] + "-01"
+    if freq == "quarterly":
+        q = (d.month - 1) // 3 + 1
+        return f"{d.year}-Q{q}"
+    return date_str
+
+
+def bucket_key_last_year(bkey: str, freq: str) -> str:
+    if freq == "monthly":
+        y, m, _ = bkey.split("-")
+        return f"{int(y) - 1}-{m}-01"
+    if freq == "quarterly":
+        y, q = bkey.split("-Q")
+        return f"{int(y) - 1}-Q{q}"
+    # woechentlich: 364 Tage (52 Wochen) zurueck trifft dieselbe Kalenderwoche im
+    # Vorjahr fast immer exakt (Abweichung nur in 53-Wochen-Jahren moeglich).
+    d = date.fromisoformat(bkey) - timedelta(days=364)
+    return d.isoformat()
+
+
+def aggregate_sum(points, freq):
+    """Punkte je Bucket aufsummieren (fuer Radverkehr/Fussgaenger-Zaehlwerte)."""
+    buckets = {}
+    for d, v in points:
+        k = bucket_key(d, freq)
+        buckets[k] = buckets.get(k, 0) + v
+    return sorted(buckets.items())
+
+
+def aggregate_avg(points, freq):
+    """Punkte je Bucket mitteln (fuer 0-100-Indizes wie Google Trends)."""
+    if freq == "daily":
+        return sorted(points)
+    buckets = {}
+    for d, v in points:
+        k = bucket_key(d, freq)
+        s, c = buckets.get(k, (0.0, 0))
+        buckets[k] = (s + v, c + 1)
+    return sorted((k, s / c) for k, (s, c) in buckets.items())
+
+
+def yoy_from_points(agg_points, freq):
+    """Letzter Bucket-Wert + Veraenderung ggue. demselben Bucket im Vorjahr.
+    Rueckgabe: (value, chg_pct_or_None, bucket_date) oder (None, None, None)."""
+    if not agg_points:
+        return None, None, None
+    d, v = agg_points[-1]
+    m = dict(agg_points)
+    prev = m.get(bucket_key_last_year(d, freq))
+    chg = pct_change(v, prev) if prev not in (None, 0) else None
+    return v, chg, d
