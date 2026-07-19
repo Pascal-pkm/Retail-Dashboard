@@ -42,6 +42,7 @@ import csv
 import io
 import math
 import re
+import time
 from datetime import date, datetime, timedelta, timezone
 
 import requests
@@ -493,7 +494,7 @@ def _duess_year_resources(region_cfg, year, errors):
     try:
         r = http_get(
             region_cfg["package_show_url"], params={"id": package_id},
-            timeout=REQUEST_TIMEOUT, retries=1,
+            timeout=REQUEST_TIMEOUT, retries=2, backoff=3,
         )
         pkg = r.json()["result"]
     except Exception:  # noqa: BLE001
@@ -525,8 +526,13 @@ def _fetch_duesseldorf(data, stations, region_cfg, errors):
     fresh = {}
     for year in years:
         for station_name, url in _duess_year_resources(region_cfg, year, errors):
+            # Kleine Pause zwischen Requests: opendata.duesseldorf.de ist ein kleines
+            # Drupal-Portal, das bei ~20-45 schnell aufeinanderfolgenden Anfragen aus
+            # der GitHub-Actions-IP-Range mit Verbindungs-Timeouts reagiert hat
+            # (verifiziert 07/2026 durch gemeldete Fehlerhäufung im taeglichen Lauf).
+            time.sleep(0.4)
             try:
-                r = http_get(url, timeout=REQUEST_TIMEOUT, retries=1)
+                r = http_get(url, timeout=REQUEST_TIMEOUT, retries=2, backoff=3)
                 rows = list(csv.reader(io.StringIO(r.content.decode("utf-8-sig")), delimiter=";"))
             except Exception as e:  # noqa: BLE001
                 errors.append((SOURCE_MODULE, f"duesseldorf {year} {station_name}: {e}"))
@@ -589,7 +595,7 @@ def _koeln_year_csv_url(region_cfg, year, errors):
     try:
         r = http_get(
             region_cfg["package_show_url"], params={"id": f"{region_cfg['package_id_prefix']}{year}"},
-            timeout=REQUEST_TIMEOUT, retries=1,
+            timeout=REQUEST_TIMEOUT, retries=2, backoff=3,
         )
         pkg = r.json()["result"]
     except Exception:  # noqa: BLE001
@@ -617,11 +623,15 @@ def _fetch_koeln(data, stations, region_cfg, errors):
     fresh = {}
     current_year = date.today().year
     for year in range(region_cfg.get("first_year", 2010), current_year + 1):
+        # Kleine Pause zwischen Requests - siehe Kommentar in _fetch_duesseldorf,
+        # govdata.de + offenedaten-koeln.de zeigten dasselbe Timeout-Muster bei
+        # ~17 schnell aufeinanderfolgenden Jahrgangs-Anfragen.
+        time.sleep(0.3)
         url = _koeln_year_csv_url(region_cfg, year, errors)
         if not url:
             continue
         try:
-            raw = http_get(url, timeout=REQUEST_TIMEOUT, retries=1).content
+            raw = http_get(url, timeout=REQUEST_TIMEOUT, retries=2, backoff=3).content
             try:
                 text = raw.decode("utf-8-sig")
             except UnicodeDecodeError:

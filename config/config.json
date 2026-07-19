@@ -153,21 +153,6 @@
     }
   },
 
-  "stocks": {
-    "tickers": {
-      "ZAL.DE": "Zalando",
-      "ADS.DE": "adidas",
-      "PUM.DE": "Puma",
-      "ITX.MC": "Inditex",
-      "HM-B.ST": "H&M"
-    },
-    "stooq_fallback": {
-      "ZAL.DE": "zal.de",
-      "ADS.DE": "ads.de",
-      "PUM.DE": "pum.de"
-    }
-  },
-
   "destatis_dashboard": {
     "tiles": {
       "tile_1667460685909": "Einzelhandelsumsatz",

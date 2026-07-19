@@ -374,9 +374,17 @@ function rvRegionSeriesList(){
   return Object.entries(DATA.series||{}).filter(([sid,s])=>sid.startsWith("radverkehr_region_") && (s.points||[]).length);
 }
 
+// Koeln liefert nur ein Monatsarchiv 2010-2022 (siehe COMPLIANCE.md) und danach
+// nichts mehr - im Gesamt-Index sorgt das fuer einen riesigen Huegel, dann eine
+// jahrelange Luecke, dann einen Sprung, sobald die anderen (lebenden) Regionen
+// einsetzen - macht den Chart unlesbar. Koeln bleibt in der Einzelstandort-Liste
+// weiterhin sichtbar, zaehlt aber nicht in den kombinierten Gesamt-Index hinein.
+const RV_INDEX_EXCLUDED_REGIONS = new Set(["radverkehr_region_nrw_koeln"]);
+
 function rvCombinedRaw(){
   const byDate = new Map();
-  for(const [,s] of rvRegionSeriesList()){
+  for(const [sid,s] of rvRegionSeriesList()){
+    if(RV_INDEX_EXCLUDED_REGIONS.has(sid)) continue;
     for(const [d,v] of s.points){
       byDate.set(d, (byDate.get(d)||0) + v);
     }
@@ -399,21 +407,21 @@ function renderRvIndex(){
   rvIndexCharts.forEach(c=>c.destroy()); rvIndexCharts=[];
   const combined = rvAggregateSum(rvCombinedRaw(), rvFreq);
   const card = document.getElementById("rvIndexCard");
-  const nRegions = rvRegionSeriesList().length;
+  const nRegions = rvRegionSeriesList().filter(([sid])=>!RV_INDEX_EXCLUDED_REGIONS.has(sid)).length;
   if(!combined.length){
     card.innerHTML = `<h3>Radverkehr-Gesamtindex (alle Regionen)</h3><div class="empty">Noch keine Daten</div>`;
     return;
   }
   const {value, chg, date} = rvYoY(combined, rvFreq);
   const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[rvFreq];
-  card.innerHTML = `<h3>Radverkehr-Gesamtindex (Summe aller Zählstellen, ${nRegions} Regionen)</h3>
+  card.innerHTML = `<h3>Radverkehr-Gesamtindex (Summe von ${nRegions} Regionen)</h3>
     <div><span class="kpi-val">${fmt(value,0)}</span>
       <span style="font-size:12px;color:var(--muted)">Fahrräder / ${periodLabel}</span>
       ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[rvFreq]}</span>`
         :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
     </div>
     <canvas height="140"></canvas>
-    <div class="hint">Stand: ${date} · Summe aus allen Regionen (Köln-Monatsarchiv seit 2022 nicht mehr aktualisiert, siehe COMPLIANCE.md).</div>`;
+    <div class="hint">Stand: ${date} · Ohne Köln (Monatsarchiv 2010–2022, seither keine neuen Daten - würde den Verlauf verzerren, siehe COMPLIANCE.md). Da Regionen zu unterschiedlichen Zeitpunkten hinzugekommen sind, wächst die Summe an diesen Stellen sprunghaft (mehr Zählstellen, nicht zwingend mehr Verkehr).</div>`;
   drawLineChart(card.querySelector("canvas"), combined, "#d7e94a", "Fahrräder", null, rvIndexCharts);
 }
 
