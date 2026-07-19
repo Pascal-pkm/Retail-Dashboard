@@ -89,8 +89,9 @@
     <span class="badge branche">Branche/Gesamtmarkt</span>.
     Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort sind <em>nicht öffentlich verfügbar</em>;
     die nächste Annäherung sind konzernweite Quartalskennzahlen (z.&nbsp;B. AOV) aus IR-Berichten.
-    Die <span class="badge region">Regional-Index</span>-Kennzahlen basieren auf Fahrrad-Dauerzählstellen
-    (nicht Fußgänger!) in 5 Regionen und dienen nur als grober Tendenz-Proxy für Wegefrequenzen.
+    Radverkehr-Zählstellen (Fahrrad, nicht Fußgänger!) aus 8 Regionen dienen nur als grober Tendenz-Proxy für
+    Wegefrequenzen und sind komplett im eigenen Reiter <strong>„Karte (Radverkehr)"</strong> zu finden – dort mit
+    Gesamt-Index, Kartenansicht und allen Einzelstandorten inkl. Vorjahresvergleich.
     <em>Klick auf einen Graphen zoomt in den umliegenden Zeitraum – „Zoom zurücksetzen" oben rechts an der Karte macht das rückgängig.</em></div>
   <div class="comments" id="comments" hidden></div>
   <div class="grid" id="grid"></div>
@@ -98,10 +99,16 @@
   <div class="errors" id="errors" hidden></div>
   <div id="mapview" hidden>
     <h2 style="font-size:15px;color:var(--accent)">Radverkehr-Zählstellen (Tendenz-Proxy für Wegefrequenzen)</h2>
-    <p style="font-size:13px;color:var(--muted);margin-top:4px">Fahrrad-Dauerzählstellen aus 5 frei zugänglichen Regionen (Baden-Württemberg, Hamburg, Leipzig, München, Münster/NRW).
-      Farbe = Region, Größe = zuletzt gemeldeter Tageswert. <strong>Kein Fußgänger-Proxy</strong>, sondern Radverkehr – als grober Trendindikator zu verstehen.</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">Fahrrad-Dauerzählstellen aus 8 frei zugänglichen Regionen (Baden-Württemberg, Hamburg, Leipzig, München,
+      sowie Münster, Dortmund, Düsseldorf und Köln in NRW). <strong>Kein Fußgänger-Proxy</strong>, sondern Radverkehr – als grober Trendindikator zu verstehen.
+      Tageswerte sind wetter-/saisonabhängig stark verrauscht, daher hier nur wöchentlich/monatlich/quartalsweise aggregiert mit Vorjahresvergleich.</p>
+    <div class="subnav" id="rvFilterbar"></div>
+    <div class="gt-index" id="rvIndexCard"></div>
+    <h3 style="font-size:14px;color:var(--accent);margin-top:18px">Karte</h3>
     <div id="map"></div>
     <div class="legend" id="mapLegend"></div>
+    <h3 style="font-size:14px;color:var(--accent);margin-top:20px">Einzelne Zählstellen</h3>
+    <div class="grid" id="rvStationGrid" style="margin-top:10px"></div>
   </div>
   <div id="gtrendsview" hidden>
     <h2 style="font-size:15px;color:var(--accent)">Google Trends – Suchinteresse Mode &amp; Einzelhandel</h2>
@@ -116,9 +123,17 @@
 <script>
 const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
 const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt", region:"Regional-Index (Radverkehr-Proxy)"};
-const REGION_COLOR = {bw:"#d7e94a", hamburg:"#f87171", leipzig:"#6ee7a0", muenchen:"#fb923c", nrw_muenster:"#c084fc"};
-const REGION_LABEL = {bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)"};
+const REGION_COLOR = {
+  bw:"#d7e94a", hamburg:"#f87171", leipzig:"#6ee7a0", muenchen:"#fb923c", nrw_muenster:"#c084fc",
+  nrw_dortmund:"#38bdf8", nrw_duesseldorf:"#fbbf24", nrw_koeln:"#f472b6",
+};
+const REGION_LABEL = {
+  bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)",
+  nrw_dortmund:"Dortmund (NRW)", nrw_duesseldorf:"Düsseldorf (NRW)", nrw_koeln:"Köln (NRW)",
+};
 const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
+const RV_SUBFREQS = [["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
+const RV_PERIOD_WORD = {weekly:"Vorjahreswoche", monthly:"Vorjahresmonat", quarterly:"Vorjahresquartal"};
 const GT_PRESETS = [["7d","7 Tage"],["30d","30 Tage"],["90d","90 Tage"],["1y","1 Jahr"],["5y","5 Jahre"],["all","Alles"]];
 const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
 // Mindestspanne je Frequenz, damit ein Frequenzwechsel immer genug Buckets fuer
@@ -128,6 +143,7 @@ const GT_MIN_SPAN_DAYS = {daily: 90, weekly: 180, monthly: 545, quarterly: 1095}
 
 let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
 let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
+let rvFreq = "monthly", rvIndexCharts = [], rvStationCharts = [];
 
 function gtEnsureMinSpan(freq){
   // Weitet gtRangeFrom bei Bedarf so weit, dass die Mindestspanne fuer "freq"
@@ -165,12 +181,14 @@ function baseChartOptions(unitLabel, onPointClick){
   };
 }
 
-function drawLineChart(canvas, points, color, unitLabel, onPointClick){
-  charts.push(new Chart(canvas, {
+function drawLineChart(canvas, points, color, unitLabel, onPointClick, targetArr){
+  const chart = new Chart(canvas, {
     type:"line",
     data:{labels:points.map(p=>p[0]), datasets:[{data:points.map(p=>p[1]), borderColor:color, backgroundColor:color+"22", fill:true, pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:color, tension:.25, borderWidth:2}]},
     options: baseChartOptions(unitLabel, onPointClick),
-  }));
+  });
+  (targetArr || charts).push(chart);
+  return chart;
 }
 
 function render(){
@@ -187,7 +205,10 @@ function render(){
   document.getElementById("errors").hidden = isMap || isGt || !(DATA.errors?.[active]||[]).length;
   if(isMap){
     document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.radverkehr_stations||{}).length} · Datenstand je Region siehe Popup`;
+    renderRvFilterbar();
+    renderRvIndex();
     renderMap();
+    renderRvStations();
     return;
   }
   if(isGt){
@@ -208,7 +229,7 @@ function render(){
 
   // Serien
   const grid = document.getElementById("grid"); grid.innerHTML="";
-  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_"));
+  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_") && !sid.startsWith("radverkehr_region_"));
   if(!series.length) grid.innerHTML = `<div class="empty">Noch keine Daten – der erste Cron-Lauf füllt dieses Panel.</div>`;
   series.sort((a,b)=>a[1].label.localeCompare(b[1].label,"de"));
   for(const [sid,s] of series){
@@ -286,6 +307,122 @@ function renderMap(){
   const legend = document.getElementById("mapLegend");
   legend.innerHTML = Object.entries(REGION_LABEL).map(([k,label])=>
     `<span><span class="dot" style="background:${REGION_COLOR[k]}"></span>${label}</span>`).join("");
+}
+
+// --- Radverkehr: Frequenz-Umschalter, Gesamt-Index, Einzelstandorte -------
+// (eigener Bucket-Aggregator: SUMME statt Durchschnitt, weil Zaehlwerte
+// Verkehrsmengen sind, kein Index wie bei Google Trends)
+
+function rvAggregateSum(points, freq){
+  const buckets = new Map();
+  for(const [d,v] of points){
+    const key = gtBucketKey(d, freq);
+    buckets.set(key, (buckets.get(key)||0) + v);
+  }
+  return [...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+}
+
+function rvBucketKeyLastYear(bucketKey, freq){
+  if(freq === "monthly"){
+    const [y,m] = bucketKey.split("-");
+    return `${Number(y)-1}-${m}-01`;
+  }
+  if(freq === "quarterly"){
+    const [y,q] = bucketKey.split("-Q");
+    return `${Number(y)-1}-Q${q}`;
+  }
+  // woechentlich: 364 Tage (52 Wochen) zurueck trifft dieselbe Kalenderwoche im
+  // Vorjahr fast immer exakt (Abweichung nur in 53-Wochen-Jahren moeglich).
+  return addDaysISO(bucketKey, -364);
+}
+
+function rvYoY(aggPts, freq){
+  if(!aggPts.length) return {value:null, chg:null, date:null};
+  const [d,v] = aggPts[aggPts.length-1];
+  const map = new Map(aggPts);
+  const prevVal = map.get(rvBucketKeyLastYear(d, freq));
+  const chg = (prevVal!=null && prevVal) ? (v-prevVal)/Math.abs(prevVal)*100 : null;
+  return {value:v, chg, date:d};
+}
+
+function rvRegionSeriesList(){
+  return Object.entries(DATA.series||{}).filter(([sid,s])=>sid.startsWith("radverkehr_region_") && (s.points||[]).length);
+}
+
+function rvCombinedRaw(){
+  const byDate = new Map();
+  for(const [,s] of rvRegionSeriesList()){
+    for(const [d,v] of s.points){
+      byDate.set(d, (byDate.get(d)||0) + v);
+    }
+  }
+  return [...byDate.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+}
+
+function renderRvFilterbar(){
+  const bar = document.getElementById("rvFilterbar");
+  bar.innerHTML = "";
+  for(const [f,label] of RV_SUBFREQS){
+    const b = document.createElement("button"); b.textContent = label;
+    b.className = f===rvFreq ? "active" : "";
+    b.onclick = () => { rvFreq = f; renderRvIndex(); renderRvStations(); };
+    bar.appendChild(b);
+  }
+}
+
+function renderRvIndex(){
+  rvIndexCharts.forEach(c=>c.destroy()); rvIndexCharts=[];
+  const combined = rvAggregateSum(rvCombinedRaw(), rvFreq);
+  const card = document.getElementById("rvIndexCard");
+  const nRegions = rvRegionSeriesList().length;
+  if(!combined.length){
+    card.innerHTML = `<h3>Radverkehr-Gesamtindex (alle Regionen)</h3><div class="empty">Noch keine Daten</div>`;
+    return;
+  }
+  const {value, chg, date} = rvYoY(combined, rvFreq);
+  const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[rvFreq];
+  card.innerHTML = `<h3>Radverkehr-Gesamtindex (Summe aller Zählstellen, ${nRegions} Regionen)</h3>
+    <div><span class="kpi-val">${fmt(value,0)}</span>
+      <span style="font-size:12px;color:var(--muted)">Fahrräder / ${periodLabel}</span>
+      ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[rvFreq]}</span>`
+        :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
+    </div>
+    <canvas height="140"></canvas>
+    <div class="hint">Stand: ${date} · Summe aus allen Regionen (Köln-Monatsarchiv seit 2022 nicht mehr aktualisiert, siehe COMPLIANCE.md).</div>`;
+  drawLineChart(card.querySelector("canvas"), combined, "#d7e94a", "Fahrräder", null, rvIndexCharts);
+}
+
+function renderRvStations(){
+  rvStationCharts.forEach(c=>c.destroy()); rvStationCharts=[];
+  const stations = DATA.radverkehr_stations || {};
+  const grid = document.getElementById("rvStationGrid"); grid.innerHTML = "";
+  const entries = Object.entries(stations).sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||"","de"));
+  if(!entries.length){ grid.innerHTML = `<div class="empty">Noch keine Zählstellen.</div>`; return; }
+  const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[rvFreq];
+  for(const [key,s] of entries){
+    const agg = rvAggregateSum(s.points||[], rvFreq);
+    const color = REGION_COLOR[s.region] || "#9aa3ab";
+    const regionLabel = REGION_LABEL[s.region] || s.region || "";
+    const card = document.createElement("div"); card.className = "card";
+    if(!agg.length){
+      card.innerHTML = `<h3>${s.name}</h3><span class="badge region" style="background:${color}22;color:${color}">${regionLabel}</span><div class="empty">Keine Daten</div>`;
+      grid.appendChild(card);
+      continue;
+    }
+    const {value, chg, date} = rvYoY(agg, rvFreq);
+    const src = s.source_url ? `<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>` : s.source;
+    card.innerHTML = `<h3>${s.name}</h3>
+      <span class="badge region" style="background:${color}22;color:${color}">${regionLabel}</span>
+      <div><span class="kpi-val">${fmt(value,0)}</span>
+        <span style="font-size:12px;color:var(--muted)">Fahrräder / ${periodLabel}</span>
+        ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[rvFreq]}</span>`
+          :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert</span>`}
+      </div>
+      <canvas height="90"></canvas>
+      <div class="src">Stand: ${date}${src?` · Quelle: ${src}`:""}</div>`;
+    grid.appendChild(card);
+    drawLineChart(card.querySelector("canvas"), agg, color, s.unit, null, rvStationCharts);
+  }
 }
 
 function gtBucketKey(dateStr, freq){

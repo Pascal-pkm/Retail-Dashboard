@@ -40,7 +40,9 @@ from datetime import date, datetime, timedelta, timezone
 from common import add_point, http_get, upsert_series
 
 SOURCE_MODULE = "radverkehr"
-STATION_MAX_POINTS = 120  # ~4 Monate taegliche Werte pro Standort (Kartenansicht braucht keine Jahre)
+STATION_MAX_POINTS = 600  # ~20 Monate taegliche Werte pro Standort - genug fuer einen
+# Vorjahresvergleich (Monat/Quartal ggue. Vorjahresmonat/-quartal) im Karte-Tab; vorher
+# 120 (~4 Monate), das reichte fuer die Kartenansicht, aber nicht fuer einen YoY-Vergleich.
 REQUEST_TIMEOUT = 30
 REQUEST_RETRIES = 3
 
