@@ -226,13 +226,13 @@
    ]
   },
   "weekly": {
-   "generated": "2026-07-18T19:16:37+00:00",
+   "generated": "2026-07-19T06:00:44+00:00",
    "items": [
     {
-     "change_pct": -13.3,
-     "date": "2026-07-17",
+     "change_pct": -42.44,
+     "date": "2026-07-18",
      "series": "radverkehr_region_hamburg",
-     "text": "▼ Radverkehr-Index Hamburg (Transparenzportal) (Tagessumme aller Zählstellen): 13,3 % ggü. Vorwoche gesunken."
+     "text": "▼ Radverkehr-Index Hamburg (Transparenzportal) (Tagessumme aller Zählstellen): 42,4 % ggü. Vorwoche gesunken."
     },
     {
      "change_pct": 0.0,
@@ -308,17 +308,17 @@
    {
     "message": "„summer outfit“: 404 Client Error: Not Found for url: https://trends.pinterest.com/api/v1/keyword/timeseries/?keyword=summer+outfit&country=DE",
     "source": "pinterest_trends",
-    "time": "2026-07-18T19:16:37+00:00"
+    "time": "2026-07-19T06:00:44+00:00"
    },
    {
     "message": "„sneaker trends“: 404 Client Error: Not Found for url: https://trends.pinterest.com/api/v1/keyword/timeseries/?keyword=sneaker+trends&country=DE",
     "source": "pinterest_trends",
-    "time": "2026-07-18T19:16:37+00:00"
+    "time": "2026-07-19T06:00:44+00:00"
    },
    {
     "message": "„herbstmode“: 404 Client Error: Not Found for url: https://trends.pinterest.com/api/v1/keyword/timeseries/?keyword=herbstmode&country=DE",
     "source": "pinterest_trends",
-    "time": "2026-07-18T19:16:37+00:00"
+    "time": "2026-07-19T06:00:44+00:00"
    }
   ]
  },
@@ -356,7 +356,7 @@
    "hystreet_manual": "2026-07-18T18:27:39+00:00",
    "monthly": "2026-07-18T16:39:35+00:00",
    "quarterly": "2026-07-18T20:25:22+00:00",
-   "weekly": "2026-07-18T19:16:37+00:00"
+   "weekly": "2026-07-19T06:00:44+00:00"
   }
  },
  "radverkehr_stations": {
