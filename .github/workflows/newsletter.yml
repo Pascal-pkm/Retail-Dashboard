@@ -1,0 +1,112 @@
+name: Newsletter (immer 10:00 Uhr Berliner Zeit)
+
+# Vom Daten-Fetch komplett entkoppelt (siehe daily/weekly/monthly/quarterly.yml):
+# der Newsletter liest nur den zuletzt committeten Stand von docs/data.json und
+# verschickt ihn zu einer festen Uhrzeit, unabhaengig davon, wann/ob die Daten
+# zuletzt aktualisiert wurden.
+#
+# GitHub-Actions-Cron kennt keine Zeitzonen/Sommerzeit - daher zwei UTC-Trigger
+# (einer trifft im Sommer 10:00 Berliner Zeit, der andere im Winter) plus ein
+# Gate im ersten Schritt, das per TZ=Europe/Berlin prueft, ob JETZT wirklich
+# 10 Uhr Ortszeit ist. Der "falsche" der beiden taeglichen Laeufe bricht dort
+# sofort ab (Sekunden statt Minuten Laufzeit).
+on:
+  schedule:
+    - cron: "0 8 * * *"   # 08:00 UTC = 10:00 Uhr Berliner Sommerzeit (CEST)
+    - cron: "0 9 * * *"   # 09:00 UTC = 10:00 Uhr Berliner Winterzeit (CET)
+  workflow_dispatch:
+    inputs:
+      force_freq:
+        description: "Nur zum manuellen Testen: eine einzelne Frequenz erzwingen (daily|weekly|monthly|quarterly) und die 10-Uhr-Pruefung ueberspringen. Leer lassen fuer normales Verhalten (automatische Auswahl nach Kalendertag, nur um 10 Uhr)."
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pruefen, ob JETZT 10:00 Uhr Berliner Zeit ist
+        id: gate
+        run: |
+          NOW_BERLIN=$(TZ="Europe/Berlin" date +'%Y-%m-%d %H:%M %Z')
+          HOUR=$(TZ="Europe/Berlin" date +%H)
+          echo "Berliner Zeit gerade: $NOW_BERLIN"
+          if [ "$HOUR" = "10" ] || [ -n "${{ inputs.force_freq }}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Nicht 10 Uhr Berliner Zeit (aktuell ${HOUR} Uhr) - das ist der Cron-Trigger fuer die jeweils andere Jahreszeit (Sommer-/Winterzeit). Hier wird nichts verschickt."
+          fi
+
+      - name: Faellige Frequenzen fuer heute bestimmen
+        id: freq
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          if [ -n "${{ inputs.force_freq }}" ]; then
+            echo "Manueller Test - nur '${{ inputs.force_freq }}' erzwingen."
+            for f in daily weekly monthly quarterly; do
+              if [ "$f" = "${{ inputs.force_freq }}" ]; then echo "$f=true" >> "$GITHUB_OUTPUT"; else echo "$f=false" >> "$GITHUB_OUTPUT"; fi
+            done
+          else
+            WEEKDAY=$(TZ="Europe/Berlin" date +%u)   # 1=Montag ... 7=Sonntag
+            DAY=$(TZ="Europe/Berlin" date +%d)
+            MMDD=$(TZ="Europe/Berlin" date +%m-%d)
+            echo "daily=true" >> "$GITHUB_OUTPUT"
+            [ "$WEEKDAY" = "1" ] && echo "weekly=true" >> "$GITHUB_OUTPUT" || echo "weekly=false" >> "$GITHUB_OUTPUT"
+            [ "$DAY" = "05" ] && echo "monthly=true" >> "$GITHUB_OUTPUT" || echo "monthly=false" >> "$GITHUB_OUTPUT"
+            case "$MMDD" in
+              02-20|05-20|08-20|11-20) echo "quarterly=true" >> "$GITHUB_OUTPUT" ;;
+              *) echo "quarterly=false" >> "$GITHUB_OUTPUT" ;;
+            esac
+            echo "Kalendertag Berlin: $(TZ="Europe/Berlin" date +'%F, %A')"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+        if: steps.gate.outputs.run == 'true'
+
+      - name: Newsletter täglich versenden
+        if: steps.gate.outputs.run == 'true' && steps.freq.outputs.daily == 'true' && vars.NEWSLETTER_ENABLED == 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
+        run: python scripts/newsletter.py daily
+
+      - name: Newsletter wöchentlich versenden (montags)
+        if: steps.gate.outputs.run == 'true' && steps.freq.outputs.weekly == 'true' && vars.NEWSLETTER_ENABLED == 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
+        run: python scripts/newsletter.py weekly
+
+      - name: Newsletter monatlich versenden (am 5.)
+        if: steps.gate.outputs.run == 'true' && steps.freq.outputs.monthly == 'true' && vars.NEWSLETTER_ENABLED == 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
+        run: python scripts/newsletter.py monthly
+
+      - name: Newsletter quartalsweise versenden (20.02./20.05./20.08./20.11.)
+        if: steps.gate.outputs.run == 'true' && steps.freq.outputs.quarterly == 'true' && vars.NEWSLETTER_ENABLED == 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
+        run: python scripts/newsletter.py quarterly

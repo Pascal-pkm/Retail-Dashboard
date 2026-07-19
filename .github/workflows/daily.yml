@@ -65,10 +65,6 @@ jobs:
           echo "Push nach mehreren Versuchen fehlgeschlagen."
           exit 1
 
-      - name: Newsletter versenden
-        if: vars.NEWSLETTER_ENABLED == 'true'
-        env:
-          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
-        run: python scripts/newsletter.py daily
+      # Hinweis: Der Newsletter-Versand laeuft NICHT mehr hier, sondern in einem
+      # eigenen Workflow (newsletter.yml), damit er unabhaengig vom Zeitpunkt
+      # dieses Datenlaufs immer um 10:00 Uhr Berliner Zeit verschickt wird.
