@@ -23,7 +23,7 @@ Sammelt öffentliche Retail-/Mode-Branchen-KPIs in vier Frequenzen (täglich, w�
 | wöchentlich | Pinterest Trends | Branche | **deaktiviert seit 07/2026** – Pinterest verlangt inzwischen ein Login für die Keyword-Suche, der inoffizielle Endpunkt liefert nur noch 404 |
 | monatlich | GENESIS 45212-0001 (inkl. Versand-/Internethandel) | Branche | Secrets nötig |
 | monatlich | Eurostat sts_trtu_m (G47, G47.71) | Branche | frei |
-| monatlich | ifo-Geschäftsklima + HDE/GfK-Konsum | Branche | absolute Werte via Destatis-Dashboard-Tiles (verifiziert) |
+| monatlich | ifo-Geschäftsklima/-lage/-erwartungen (+ HDE/GfK-Konsum) | Branche | volle Historie seit 01/2005 direkt von ifo – **Nutzungsbedingungen-Restrisiko akzeptiert, siehe COMPLIANCE.md Abschnitt 7**; HDE/GfK weiterhin via Destatis-Dashboard-Tiles |
 | quartalsweise | IR-Berichte (Zalando inkl. About You, Inditex, H&M) | **Konzern** | Zalando: ~30 KPIs inkl. Historie seit 2020 aus strukturierter XLSX (siehe unten); Inditex/H&M: einzelne KPIs per PDF-Regex, Inditex meist nur Link (JS-Seite) |
 
 **Wichtig:** Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort/Outlet sind **nicht öffentlich verfügbar** (nur GfK/NIQ, EHI, BTE als Bezahl-Panels). Die Quartals-KPIs aus IR-Berichten sind Konzernwerte und werden im Dashboard/Newsletter entsprechend gekennzeichnet.

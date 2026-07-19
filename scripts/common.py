@@ -10,9 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "docs" / "data.json"
 CONFIG_PATH = ROOT / "config" / "config.json"
 
-MAX_POINTS = {"daily": 1600, "weekly": 260, "monthly": 120, "quarterly": 40}
+MAX_POINTS = {"daily": 1600, "weekly": 260, "monthly": 300, "quarterly": 40}
 # daily=1600 (~4,4 Jahre) statt frueher 730, damit ein Hystreet-Backfill ab 2024
 # nicht durch die Historienbegrenzung wieder abgeschnitten wird.
+# monthly=300 (25 Jahre) statt frueher 120 (10 Jahre), damit die ifo-Geschaeftsklima-
+# Zeitreihe (komplette Historie seit 01/2005, siehe ifo_hde.py) nicht abgeschnitten wird.
 
 USER_AGENT = "retail-kpi-dashboard (github.com; nicht-kommerzielles Branchen-Monitoring)"
 

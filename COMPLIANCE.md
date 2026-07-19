@@ -42,7 +42,7 @@ Eurostat-Daten dürfen laut Eurostat-Lizenzpolitik (CC BY 4.0-basiert) frei weit
 - **Google Trends via pytrends:** inoffizielle Bibliothek, kein API-Vertrag; Werte sind relative Indizes. Ausfall-/Sperrrisiko einkalkuliert (Fehlerprotokoll statt Abbruch).
 - **Pinterest Trends:** kein offizielles API; Best-Effort-Scraper, ToS-Grauzone. **Seit 07/2026 deaktiviert** (`pinterest_trends.enabled=false`): Pinterest verlangt für die Keyword-Suche jetzt ein Login (per Browser verifiziert – die Suche leitet sofort auf ein Anmelden/Registrieren-Modal um, kein Such-Request feuert mehr unauthentifiziert). Der bisher genutzte interne Endpunkt liefert nur noch 404. Da wir bewusst keine Konten anlegen oder Logins automatisieren, bleibt die Quelle deaktiviert, bis es einen offiziellen, oeffentlichen Zugang gibt.
 - **Aktienkurse (Yahoo/Stooq):** nur zur Information, kein Weitervertrieb der Rohdaten.
-- **ifo:** Kennzahl aus öffentlicher Pressemitteilung mit Quellenangabe (Zitatrecht/Pressemitteilungscharakter); keine Vervielfältigung ganzer Publikationen.
+- **ifo (Fallback-Weg):** Falls der direkte ifo-Abruf scheitert (siehe Abschnitt 7), greift ersatzweise die Kennzahl aus der öffentlichen Destatis-Pressemitteilung mit Quellenangabe (Zitatrecht/Pressemitteilungscharakter); keine Vervielfältigung ganzer Publikationen.
 - **IR-Berichte:** öffentliche Pflichtveröffentlichungen; wir speichern Links + einzelne Kennzahlen mit Quellenangabe, keine PDF-/XLSX-Weiterverbreitung. Bei Zalando werden seit 07/2026 rein numerische Kennzahlen (keine Formatierung, Kommentare oder Layout) aus der öffentlich zum Download bereitgestellten „Financials XLS" strukturiert ausgelesen (statt einzelner Werte per PDF-Text-Regex) – die Rohdatei selbst wird nicht gespeichert oder veröffentlicht, nur die extrahierten Zahlen mit Link zur offiziellen Quelle.
 
 ## 5. Radverkehr-Dauerzählstellen (5 Regionen, Stand 07/2026) — ✅ unkritisch mit Namensnennung
@@ -61,9 +61,25 @@ Alle fünf stehen unter der **Datenlizenz Deutschland – Namensnennung – 2.0*
 
 **Bewusst ausgeklammert: Kiel/Schleswig-Holstein.** Der Datensatz „Zählwerte Radverkehrszähler (Radzählstationen) Kiel" (Anbieter: KielRegion GmbH, Lizenz frei/Open Data, 6 Standorte, tägliche Werte) existiert in der Mobilithek (bundesweiter Mobilitätsdaten-Marktplatz) und ist inhaltlich lizenzrechtlich unkritisch. Der Zugriff erfordert aber mehr als einen persönlichen Account: Man muss als „Bestellmanager" eine **Organisation** bei der Mobilithek registrieren (Formular mit Organisationsname/-typ, Adresse, vertretungsberechtigter Person), bevor überhaupt ein „Abonnieren"-Button für das Angebot erscheint (Stand: 18.07.2026, mit registriertem Nutzeraccount geprüft, ID `995322152055894016`). Auf Nutzerentscheidung daher vorerst weiterhin nicht eingebunden. Falls die Organisation später registriert und das Abonnement freigeschaltet wird, kann Kiel als sechste Region ergänzt werden (`scripts/sources/radverkehr.py` ist dafür bewusst pro Region erweiterbar aufgebaut) – dazu wird vermutlich ein API-Key/Endpoint aus dem Mobilithek-Abonnement benötigt, der als GitHub-Secret hinterlegt würde.
 
-## 6. Freigabe-Checkliste vor Produktivbetrieb
+## 7. ifo Institut — direkte ifo-Zeitreihen (Geschäftsklima/-lage/-erwartungen) — ⚠️ Restrisiko akzeptiert
+
+Seit 07/2026 lädt `scripts/sources/ifo_hde.py` primär die von ifo direkt bereitgestellte Excel-Zeitreihe unter ifo.de/ifo-zeitreihen (kompletter Monatsverlauf seit 01/2005, statt nur des Werts aus dem Destatis-Pressetext). Der Download-Bereich verlinkt als Nutzungsbedingung die Seite „Bestellinformationen für ifo Zeitreihen", die wörtlich sagt:
+
+> „Die Nutzung der Daten ist nur zur privaten Information zulässig. Die Weitergabe bzw. Veröffentlichung ist nur nach besonderer Vereinbarung mit dem ifo Institut gestattet."
+
+Das steht im direkten Widerspruch zu einer öffentlichen GitHub-Pages-Seite — inhaltlich dieselbe Art von Einschränkung wie bei Hystreet (Abschnitt 1), nur ohne die dort explizit genannte Vertragsstrafe. Geprüft am 19.07.2026 per Browser (Cookie-Banner akzeptiert, Seite direkt aufgerufen).
+
+**Nutzerentscheidung 2026-07-19:** Trotz dieser Einschränkung wird die Quelle für die öffentliche Website genutzt (Option „Restrisiko akzeptieren" bewusst gewählt, nachdem die Alternative — bei der stark eingeschränkten Destatis-Pressetext-Variante mit nur 1–2 Punkten pro Monat zu bleiben — als Ausweichoption angeboten wurde). Einschränkend umgesetzt:
+
+- Es wird **nicht die Originaldatei** gespeichert oder verlinkt, nur einzelne extrahierte Zahlenwerte (Geschäftsklima, -lage, -erwartungen je Monat) mit Quellenangabe.
+- Fällt der direkte Abruf aus (z. B. weil ifo den Zugang technisch einschränkt), greift automatisch der rechtlich unkritische Destatis-Fallback (Abschnitt 4).
+
+Falls du dieses Restrisiko nachträglich vermeiden willst: (a) Rückkehr zum reinen Destatis-Fallback (in `ifo_hde.py` `_fetch_ifo_direct` deaktivieren/entfernen), oder (b) ifo Institut (Kontakt laut Zeitreihen-Seite: wohlrabe@ifo.de, sauer@ifo.de) um eine Vereinbarung für die Veröffentlichung bitten — analog zum Hystreet-Vorgehen.
+
+## 8. Freigabe-Checkliste vor Produktivbetrieb
 
 - [ ] Hystreet: bewusste Entscheidung getroffen (Zustimmung eingeholt ODER Restrisiko akzeptiert ODER Modul bleibt deaktiviert)
+- [ ] ifo-Zeitreihen (Abschnitt 7): bewusste Entscheidung getroffen (Restrisiko akzeptiert ODER Rückkehr zum Destatis-Fallback ODER Zustimmung bei ifo eingeholt)
 - [ ] Newsletter-Empfänger (`NEWSLETTER_TO`) geprüft — nur eigene, private Adresse(n) hinterlegt
 - [ ] GENESIS-Zugang registriert, Secrets hinterlegt
 - [ ] Quellenvermerke auf Website + Newsletter geprüft
