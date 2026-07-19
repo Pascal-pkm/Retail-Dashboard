@@ -1045,6 +1045,25 @@ function dailyHealthSummary(){
   return {fresh, total: all.length};
 }
 
+// Summe ueber alle Regionen einer Quellenart, Tag/Woche/Monat/Quartal - NUR fuer
+// die Sparkline in den "Auf einen Blick"-Kacheln (die Kopfzahl selbst kommt aus
+// dailyRegionSummary/bucketRegionSummary, die zusaetzlich auf Aktualitaet
+// pruefen). "Heute" wird bei "taeglich" ausgeschlossen (Teiltag), sonst nutzt
+// rvAggregateSum bereits denselben Ausschluss.
+function combinedSumSeries(seriesList, freq){
+  const buckets = new Map();
+  for(const [,s] of seriesList){
+    const pts = s.points||[];
+    if(freq === "daily"){
+      const yesterday = addDaysISO(todayISO(), -1);
+      for(const [d,v] of pts){ if(d>yesterday) continue; buckets.set(d, (buckets.get(d)||0)+v); }
+    } else {
+      for(const [k,v] of rvAggregateSum(pts, freq)) buckets.set(k, (buckets.get(k)||0)+v);
+    }
+  }
+  return [...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+}
+
 function heroCard(title, value, unit, chg, chgWord, dateStr, note, withChart){
   const card = document.createElement("div"); card.className = "card";
   card.innerHTML = `<h3>${title}</h3>
@@ -1179,10 +1198,17 @@ function renderPeriodBriefing(){
 
   if(freq === "daily"){
     const fg = dailyRegionSummary(fgRegionSeriesList());
-    if(fg) heroGrid.appendChild(heroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/Tag, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, "ggü. Vortag", fg.date, "wetterabhängig verrauscht · Details im Reiter „Fußgänger“", false));
-
+    if(fg){
+      const card = heroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/Tag, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, "ggü. Vortag", fg.date, "wetterabhängig verrauscht · Details im Reiter „Fußgänger“", true);
+      heroGrid.appendChild(card);
+      drawLineChart(card.querySelector("canvas"), combinedSumSeries(fgRegionSeriesList(), freq).slice(-60), "#60a5fa", "Fußgänger/Tag", null, briefingCharts);
+    }
     const rv = dailyRegionSummary(rvRegionSeriesList());
-    if(rv) heroGrid.appendChild(heroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/Tag, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, "ggü. Vortag", rv.date, "wetterabhängig verrauscht · Details im Reiter „Karte (Radverkehr)“", false));
+    if(rv){
+      const card = heroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/Tag, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, "ggü. Vortag", rv.date, "wetterabhängig verrauscht · Details im Reiter „Karte (Radverkehr)“", true);
+      heroGrid.appendChild(card);
+      drawLineChart(card.querySelector("canvas"), combinedSumSeries(rvRegionSeriesList(), freq).slice(-60), "#f472b6", "Fahrräder/Tag", null, briefingCharts);
+    }
   } else {
     // Woechentlich/Monatlich/Quartal: Summe des letzten VOLLSTAENDIGEN Buckets
     // ggü. demselben Bucket im Vorjahr (siehe bucketRegionSummary) - bewusst
@@ -1191,10 +1217,17 @@ function renderPeriodBriefing(){
     // Quellen mit unterschiedlichem Meldeverzug) empfindlich auf Ausreisser.
     const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[freq];
     const fg = bucketRegionSummary(fgRegionSeriesList(), freq);
-    if(fg) heroGrid.appendChild(heroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/${periodLabel}, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, `ggü. ${RV_PERIOD_WORD[freq]}`, fg.date, "Details im Reiter „Fußgänger“", false));
-
+    if(fg){
+      const card = heroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/${periodLabel}, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, `ggü. ${RV_PERIOD_WORD[freq]}`, fg.date, "Details im Reiter „Fußgänger“", true);
+      heroGrid.appendChild(card);
+      drawLineChart(card.querySelector("canvas"), combinedSumSeries(fgRegionSeriesList(), freq).slice(-20), "#60a5fa", `Fußgänger/${periodLabel}`, null, briefingCharts);
+    }
     const rv = bucketRegionSummary(rvRegionSeriesList(), freq);
-    if(rv) heroGrid.appendChild(heroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/${periodLabel}, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, `ggü. ${RV_PERIOD_WORD[freq]}`, rv.date, "Details im Reiter „Karte (Radverkehr)“", false));
+    if(rv){
+      const card = heroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/${periodLabel}, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, `ggü. ${RV_PERIOD_WORD[freq]}`, rv.date, "Details im Reiter „Karte (Radverkehr)“", true);
+      heroGrid.appendChild(card);
+      drawLineChart(card.querySelector("canvas"), combinedSumSeries(rvRegionSeriesList(), freq).slice(-20), "#f472b6", `Fahrräder/${periodLabel}`, null, briefingCharts);
+    }
   }
 
   if(!heroGrid.children.length) heroGrid.innerHTML = `<div class="empty">Noch keine Daten für diese Übersicht.</div>`;
