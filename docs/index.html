@@ -100,7 +100,7 @@
     Wegefrequenzen und sind komplett im eigenen Reiter <strong>„Karte (Radverkehr)"</strong> zu finden – dort mit
     Gesamt-Index, Kartenansicht und allen Einzelstandorten inkl. Vorjahresvergleich.
     <em>Klick auf einen Graphen zoomt in den umliegenden Zeitraum – „Zoom zurücksetzen" oben rechts an der Karte macht das rückgängig.</em></div>
-  <div id="dailyBriefing" hidden></div>
+  <div id="periodBriefing" hidden></div>
   <div class="comments" id="comments" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="ir"></div>
@@ -170,7 +170,7 @@ const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
 // 30-Tage-Spanne beim Wechsel auf "Monatlich" bei nur 1-2 Punkten haengen).
 const GT_MIN_SPAN_DAYS = {daily: 90, weekly: 180, monthly: 545, quarterly: 1095};
 
-let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [], dailyCharts = [];
+let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [], briefingCharts = [];
 let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
 let rvFreq = "monthly", rvIndexCharts = [], rvStationCharts = [];
 let fgFreq = "monthly", fgIndexCharts = [], fgStationCharts = [], fgLeafletMap = null, fgMapMarkers = [];
@@ -253,11 +253,13 @@ function render(){
   document.getElementById("comments").hidden = isMap || isFg || isGt || !(DATA.commentary?.[active]?.items || []).length;
   document.getElementById("ir").hidden = isMap || isFg || isGt;
   document.getElementById("errors").hidden = isMap || isFg || isGt || !(DATA.errors?.[active]||[]).length;
+  document.getElementById("periodBriefing").hidden = isMap || isFg || isGt;
   if(isMap || isFg || isGt){
     // Karte/Fussgaenger/Google-Trends haben ihre eigene Darstellung - Inhalte der
     // generischen Kennzahlen-Ansicht (vorheriger Tab) nicht stehen lassen.
     document.getElementById("grid").innerHTML = "";
     document.getElementById("ir").innerHTML = "";
+    briefingCharts.forEach(c=>c.destroy()); briefingCharts=[];
   }
   if(isMap){
     document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.radverkehr_stations||{}).length} · Datenstand je Region siehe Popup`;
@@ -285,13 +287,11 @@ function render(){
   const upd = DATA.meta?.updated?.[active];
   document.getElementById("meta").textContent = upd ? `Letzte Aktualisierung (${active}): ${new Date(upd).toLocaleString("de-DE")}` : "Noch kein Datenlauf für diese Frequenz.";
 
-  // Tagesübersicht ("Auf einen Blick") - nur im Täglich-Reiter, buendelt die
-  // sonst ueber Karte/Fussgaenger/Google-Trends verstreuten Tageswerte zu ein
-  // paar Kennzahlen, damit dieser Reiter nicht nur aus der Hystreet-Einzelkarte
-  // und der Trend-Kommentierung besteht (Nutzerwunsch 07/2026).
-  const briefing = document.getElementById("dailyBriefing");
-  briefing.hidden = active !== "daily";
-  if(active === "daily") renderDailyBriefing(); else { dailyCharts.forEach(c=>c.destroy()); dailyCharts=[]; }
+  // Periodenübersicht ("Auf einen Blick") - in allen vier Frequenz-Reitern,
+  // buendelt die sonst ueber Karte/Fussgaenger/Google-Trends verstreuten Werte
+  // zu 3 Kennzahlen + einer dynamischen Top-3-Abweicher-Liste, damit kein
+  // Reiter nur aus der Kommentierung + 1-2 Einzelkarten besteht (Nutzerwunsch 07/2026).
+  renderPeriodBriefing();
 
   // Kommentierung
   const cbox = document.getElementById("comments");
@@ -301,7 +301,11 @@ function render(){
 
   // Serien
   const grid = document.getElementById("grid"); grid.innerHTML="";
-  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_") && !sid.startsWith("radverkehr_region_") && !sid.startsWith("fussgaenger_region_"));
+  // Hystreet (Limburg) ist jetzt Teil der Periodenübersicht oben nicht direkt,
+  // aber weiterhin verwirrend als einzige Karte im sonst leeren Täglich-Reiter -
+  // auf Nutzerwunsch hier ausgeblendet (Hystreet-Serien existieren ohnehin nur
+  // mit frequency "daily", betrifft also keinen anderen Reiter).
+  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_") && !sid.startsWith("radverkehr_region_") && !sid.startsWith("fussgaenger_region_") && !(active==="daily" && sid.startsWith("hystreet")));
   if(!series.length) grid.innerHTML = `<div class="empty">Noch keine Daten – der erste Cron-Lauf füllt dieses Panel.</div>`;
   series.sort((a,b)=>a[1].label.localeCompare(b[1].label,"de"));
   for(const [sid,s] of series){
@@ -388,8 +392,16 @@ function renderMap(){
 // Verkehrsmengen sind, kein Index wie bei Google Trends)
 
 function rvAggregateSum(points, freq){
+  // "Heute" wird IMMER ausgeschlossen: der taegliche Cron-Lauf zieht Daten
+  // mitten am Tag, ein "heutiger" Rohpunkt ist also grundsaetzlich ein
+  // unvollstaendiger Teiltag. In einer Wochen-/Monats-/Quartalssumme wuerde das
+  // sonst die laufende Periode (Woche/Monat/Quartal) systematisch nach unten
+  // verzerren, je naeher "heute" am Bucket-Ende liegt - betrifft Kettenindex
+  // (Karte/Fussgaenger) und Einzelstandort-Karten gleichermassen.
+  const today = todayISO();
   const buckets = new Map();
   for(const [d,v] of points){
+    if(d === today) continue;
     const key = gtBucketKey(d, freq);
     buckets.set(key, (buckets.get(key)||0) + v);
   }
@@ -410,10 +422,26 @@ function rvBucketKeyLastYear(bucketKey, freq){
   return addDaysISO(bucketKey, -364);
 }
 
+// Der zuletzt gebildete Bucket (aktuelle Woche/Monat/Quartal) ist per Definition
+// noch nicht abgeschlossen, solange das heutige Datum sein Ende noch nicht
+// erreicht hat - ein Vergleich gegen einen VOLLSTAENDIGEN Vorjahres-/Vorperioden-
+// Bucket wuerde sonst systematisch einen Einbruch zeigen, der rein aus der noch
+// nicht verstrichenen Zeit resultiert (z.B. ein Quartal, das erst vor 19 von 92
+// Tagen begann, "nur" 20% eines Vorjahresquartals erreicht - kein echter Rueckgang).
+// Betrifft "taeglich" nicht, dort wird "heute" bereits in den Rohdaten selbst
+// ausgeschlossen (siehe rvAggregateSum/dailyRegionSummary).
+function dropIncompleteBucket(aggPts, freq){
+  if(!freq || freq === "daily" || aggPts.length < 2) return aggPts;
+  const lastKey = aggPts[aggPts.length-1][0];
+  const span = gtBucketSpan(lastKey, freq);
+  return todayISO() <= span.to ? aggPts.slice(0, -1) : aggPts;
+}
+
 function rvYoY(aggPts, freq){
-  if(!aggPts.length) return {value:null, chg:null, date:null};
-  const [d,v] = aggPts[aggPts.length-1];
-  const map = new Map(aggPts);
+  const pts = dropIncompleteBucket(aggPts, freq);
+  if(!pts.length) return {value:null, chg:null, date:null};
+  const [d,v] = pts[pts.length-1];
+  const map = new Map(pts);
   const prevVal = map.get(rvBucketKeyLastYear(d, freq));
   const chg = (prevVal!=null && prevVal) ? (v-prevVal)/Math.abs(prevVal)*100 : null;
   return {value:v, chg, date:d};
@@ -908,15 +936,38 @@ function renderGtrends(){
   }
 }
 
-// --- Tagesübersicht ("Auf einen Blick", Nutzerwunsch 07/2026) ---------------
-// Der Taeglich-Reiter zeigte bisher praktisch nur eine einzelne Hystreet-Karte
-// plus die Google-Trends-Kommentierung, obwohl im Hintergrund taeglich >30
-// Rohserien (Radverkehr/Fussgaenger je Region, 17 Google-Trends-Suchbegriffe)
-// einlaufen - die aber wegen der Praefix-Filter oben in der generischen Karten-
-// Schleife bewusst ausgeblendet sind (Einzelkarten dafuer gehoeren in die
-// Spezial-Reiter Karte/Fussgaenger/Google Trends, sonst waere der Reiter
-// ueberladen). Diese Sektion fasst genau diese Rohdaten zu wenigen, klar
-// eingeordneten Kennzahlen zusammen, statt sie 1:1 zu duplizieren.
+// --- Periodenübersicht ("Auf einen Blick", Nutzerwunsch 07/2026) -----------
+// Jeder Frequenz-Reiter (Taeglich/Woechentlich/Monatlich/Quartal) zeigte bisher
+// praktisch nur die generische Kommentierung plus 0-1 Einzelkarten, obwohl im
+// Hintergrund >30 Rohserien (Radverkehr/Fussgaenger je Region, 17 Google-
+// Trends-Suchbegriffe) einlaufen - die aber wegen der Praefix-Filter oben in
+// der generischen Karten-Schleife bewusst ausgeblendet sind (Einzelkarten
+// dafuer gehoeren in die Spezial-Reiter Karte/Fussgaenger/Google Trends, sonst
+// waeren diese Reiter ueberladen). Diese Sektion fasst genau diese Rohdaten zu
+// 3 Kennzahlen + einer dynamischen Top-3-Abweicher-Liste zusammen, statt sie
+// 1:1 zu duplizieren:
+// - "Taeglich": rohe Tagessumme (letzter VOLLSTAENDIGER Tag, s.u.) ggü. Vortag.
+// - "Woechentlich/Monatlich/Quartal": derselbe Kettenindex (Basis 100) und
+//   dieselbe Vorjahres-Abweichung, die auch in den Reitern Karte/Fussgaenger
+//   angezeigt wird - bewusst KEIN Vergleich zur Vorwoche/-monat, weil Rad-/
+//   Fussverkehr stark saisonal/wetterabhaengig schwankt (siehe rvYoY/chainedIndex).
+// Google Trends nutzt dagegen konsequent den Vorzeitraum (wie im eigenen Reiter).
+
+const GT_PERIOD_WORD = {daily:"Vortag", weekly:"Vorwoche", monthly:"Vormonat", quarterly:"Vorquartal"};
+
+function gtBucketAll(points, freq){
+  // Wie gtAggregate(), aber OHNE den vom Google-Trends-Reiter gesetzten Datums-
+  // filter (gtRangeFrom/gtRangeTo) - die Periodenuebersicht soll unabhaengig von
+  // einer dort evtl. eingestellten Zoom-Auswahl immer die volle Historie nutzen.
+  if(freq === "daily") return points;
+  const buckets = new Map();
+  for(const [d,v] of points){
+    const key = gtBucketKey(d, freq);
+    if(!buckets.has(key)) buckets.set(key, {sum:0, count:0});
+    const b = buckets.get(key); b.sum += v; b.count++;
+  }
+  return [...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,b])=>[k, b.sum/b.count]);
+}
 
 function dailyRegionSummary(seriesList){
   // Tagesaktuelle Summe ueber alle Regionen einer Quellenart (Radverkehr/Fussgaenger).
@@ -950,6 +1001,40 @@ function dailyRegionSummary(seriesList){
   return {sum, date:freshestDate, nUsed, nTotal:usable.length, chg};
 }
 
+// Wie dailyRegionSummary(), aber fuer Wochen-/Monats-/Quartalsbuckets: Summe des
+// letzten VOLLSTAENDIGEN Buckets ueber alle Regionen, deren eigene Rohdaten bis
+// zu dessen Ende reichen, ggü. demselben Bucket im Vorjahr. Bewusst eine simple
+// Summe statt des Kettenindex (chainedIndex) aus den Reitern Karte/Fussgaenger:
+// der Kettenindex reagiert bei duennem Regionen-Overlap (typisch fuer Quellen
+// mit unterschiedlichem Meldeverzug) empfindlich auf einzelne Ausreisser-Buckets;
+// diese Summenkennzahl ist fuer eine "auf einen Blick"-Kachel robuster und pruegt
+// transparent (nUsed/nTotal), wie viele Regionen tatsaechlich beitragen.
+function bucketRegionSummary(seriesList, freq){
+  const perRegionAgg = [];
+  for(const [,s] of seriesList){
+    const pts = s.points||[];
+    if(!pts.length) continue;
+    const raw = rvAggregateSum(pts, freq);
+    if(!raw.length) continue;
+    const ownLast = pts[pts.length-1][0];
+    const span = gtBucketSpan(raw[raw.length-1][0], freq);
+    const agg = ownLast < span.to ? raw.slice(0, -1) : raw;
+    if(agg.length) perRegionAgg.push(agg);
+  }
+  if(!perRegionAgg.length) return null;
+  const freshestBucket = perRegionAgg.map(a=>a[a.length-1][0]).sort().slice(-1)[0];
+  let sum=0, sumPrev=0, nUsed=0, nPrevUsed=0;
+  for(const agg of perRegionAgg){
+    const last = agg[agg.length-1];
+    if(last[0] !== freshestBucket) continue;
+    sum += last[1]; nUsed++;
+    const prevVal = new Map(agg).get(rvBucketKeyLastYear(freshestBucket, freq));
+    if(prevVal!=null){ sumPrev += prevVal; nPrevUsed++; }
+  }
+  const chg = (nUsed>0 && nPrevUsed===nUsed && sumPrev>0) ? (sum-sumPrev)/sumPrev*100 : null;
+  return {sum, date:freshestBucket, nUsed, nTotal:perRegionAgg.length, chg};
+}
+
 function dailyHealthSummary(){
   // Ueberblick, wie viele der taeglichen Quellen (ueber alle Reiter hinweg) noch
   // aktuelle Werte liefern - direkte Antwort auf "wie verlaesslich ist die
@@ -960,7 +1045,7 @@ function dailyHealthSummary(){
   return {fresh, total: all.length};
 }
 
-function dailyHeroCard(title, value, unit, chg, chgWord, dateStr, note, withChart){
+function heroCard(title, value, unit, chg, chgWord, dateStr, note, withChart){
   const card = document.createElement("div"); card.className = "card";
   card.innerHTML = `<h3>${title}</h3>
     <div><span class="kpi-val">${value}</span>
@@ -974,43 +1059,150 @@ function dailyHeroCard(title, value, unit, chg, chgWord, dateStr, note, withChar
   return card;
 }
 
-function renderDailyBriefing(){
-  dailyCharts.forEach(c=>c.destroy()); dailyCharts=[];
-  const box = document.getElementById("dailyBriefing");
+// Einzel-Serien-Abweichung fuer die Top-3-Abweicher-Listen: liefert
+// {chg, date, value, agg} oder null, wenn kein valider/aktueller Vergleichswert
+// existiert (zu wenig Historie, oder letzter Wert bereits veraltet - eine seit
+// Jahren tote Quelle soll nicht als "groesster Abweicher" auftauchen, nur weil
+// ihr letzter Sprung zufaellig gross war).
+function regionMoverChange(points, freq){
+  if(freq === "daily"){
+    const usable = (points||[]).filter(([d])=>d <= addDaysISO(todayISO(), -1));
+    if(usable.length < 2) return null;
+    const [d, v] = usable[usable.length-1];
+    if(isStaleDate(d)) return null;
+    const prevV = usable[usable.length-2][1];
+    if(!prevV) return null;
+    return {chg: (v-prevV)/Math.abs(prevV)*100, date: d, value: v, agg: usable.slice(-30)};
+  }
+  const raw = rvAggregateSum(points||[], freq);
+  if(!raw.length) return null;
+  // Eigene Meldeverzoegerung ausschliessen (wie bucketRegionSummary): reicht die
+  // Historie DIESER Region nicht bis zum Ende ihres letzten Buckets, ist er nur
+  // ein Teilzeitraum und wuerde als Scheinabweichung im Ranking auftauchen (z.B.
+  // eine Quelle mit mehrtaegigem Meldeverzug wie Rostock oder Moers).
+  const ownLast = (points||[])[points.length-1][0];
+  const span = gtBucketSpan(raw[raw.length-1][0], freq);
+  const agg = ownLast < span.to ? raw.slice(0, -1) : raw;
+  if(!agg.length) return null;
+  const {value, chg, date} = rvYoY(agg, freq);
+  if(chg==null || isStaleDate(date)) return null;
+  return {chg, date, value, agg: agg.slice(-16)};
+}
+
+function gtMoverChange(points, freq){
+  const agg = gtBucketAll(points||[], freq);
+  if(agg.length < 2) return null;
+  const [d,v] = agg[agg.length-1];
+  if(isStaleDate(d)) return null;
+  const chg = gtChangePct(agg);
+  if(chg==null) return null;
+  return {chg, date:d, value:v, agg: agg.slice(freq==="daily"?-30:-16)};
+}
+
+function buildMoverGroup(container, title, items, periodWord){
+  if(!items.length) return;
+  const h = document.createElement("h3");
+  h.style.cssText = "font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px";
+  h.textContent = title;
+  container.appendChild(h);
+  const grid = document.createElement("div"); grid.className = "grid";
+  container.appendChild(grid);
+  for(const it of items){
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<h3>${it.label}</h3>
+      <div><span class="kpi-val">${fmt(it.value, Math.abs(it.value)>=1000?0:1)}</span>
+        <span style="font-size:12px;color:var(--muted)">${it.unit}</span>
+        <span class="kpi-chg ${it.chg>=0?"up":"down"}">${it.chg>=0?"▲":"▼"} ${fmt(Math.abs(it.chg))} % ggü. ${periodWord}</span>
+      </div>
+      <canvas height="80"></canvas>
+      <div class="src">Stand: ${it.date}</div>`;
+    grid.appendChild(card);
+    drawLineChart(card.querySelector("canvas"), it.agg, it.color, it.unit, null, briefingCharts);
+  }
+}
+
+function renderMoversSection(freq){
+  const box = document.getElementById("moversSection");
+  box.innerHTML = "";
+
+  const regionEntries = [...rvRegionSeriesList(), ...fgRegionSeriesList()].map(([sid,s])=>{
+    const isFg = sid.startsWith("fussgaenger_region_");
+    const label = `${(isFg?FG_REGION_LABEL:REGION_LABEL)[s.region] || s.region} (${isFg?"Fußgänger":"Radverkehr"})`;
+    const color = (isFg?FG_REGION_COLOR:REGION_COLOR)[s.region] || "#9aa3ab";
+    const m = regionMoverChange(s.points, freq);
+    return m ? {label, color, unit: isFg?(s.unit||"Fußgänger"):"Fahrräder", ...m} : null;
+  }).filter(Boolean).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,3);
+
+  const gtEntries = gtSeriesList().map(([sid,s])=>{
+    const m = gtMoverChange(s.points, freq);
+    return m ? {label: s.keyword||s.label, color:"#60a5fa", unit:"Index 0–100", ...m} : null;
+  }).filter(Boolean).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,3);
+
+  if(!regionEntries.length && !gtEntries.length) return;
+  const h2 = document.createElement("h2");
+  h2.style.cssText = "font-size:15px;color:var(--accent);margin-bottom:2px";
+  h2.textContent = "Größte Abweichungen";
+  box.appendChild(h2);
+  buildMoverGroup(box, "Frequenzen (Rad-/Fußverkehr)", regionEntries, freq==="daily"?"Vortag":RV_PERIOD_WORD[freq]);
+  buildMoverGroup(box, "Google Trends", gtEntries, GT_PERIOD_WORD[freq]);
+}
+
+function renderPeriodBriefing(){
+  briefingCharts.forEach(c=>c.destroy()); briefingCharts=[];
+  const freq = active;
+  const box = document.getElementById("periodBriefing");
   box.innerHTML = `<h2 style="font-size:15px;color:var(--accent);margin-bottom:10px">Auf einen Blick</h2>
-    <div class="grid" id="dailyHeroGrid" style="margin-bottom:16px"></div>
-    <div class="note" id="dailyHealthNote"></div>`;
-  const heroGrid = box.querySelector("#dailyHeroGrid");
+    <div class="grid" id="heroGrid" style="margin-bottom:16px"></div>
+    <div class="note" id="healthNote" style="margin-bottom:18px"></div>
+    <div id="moversSection"></div>`;
+  const heroGrid = box.querySelector("#heroGrid");
 
   // Google-Trends-Modeindex: bewusst ALLE Suchbegriffe (nicht die im Google-
   // Trends-Reiter ggf. eingeschraenkte Auswahl), damit diese Kachel ein
-  // stabiler, von der Nutzer-Auswahl unabhaengiger Tageswert bleibt.
+  // stabiler, von der Nutzer-Auswahl unabhaengiger Wert bleibt. Fuer "Taeglich"
+  // Tag-ueber-Tag, sonst Periode-ueber-Periode - wie im Google-Trends-Reiter.
   const gtAll = gtSeriesList();
   if(gtAll.length){
-    const gtAgg = gtAggregate(gtCompositeDaily(new Set(gtAll.map(([sid])=>sid))), "daily").slice(-60);
+    const gtAgg = gtBucketAll(gtCompositeDaily(new Set(gtAll.map(([sid])=>sid))), freq).slice(-60);
     if(gtAgg.length){
       const [d,v] = gtAgg[gtAgg.length-1];
       const chg = gtChangePct(gtAgg);
-      const card = dailyHeroCard("Google-Trends-Modeindex", fmt(v,1), `Ø Index 0–100, ${gtAll.length} Suchbegriffe`, chg, "ggü. Vortag", d, "Details im Reiter „Google Trends“", true);
+      const card = heroCard("Google-Trends-Modeindex", fmt(v,1), `Ø Index 0–100, ${gtAll.length} Suchbegriffe`, chg, `ggü. ${GT_PERIOD_WORD[freq]}`, d, "Details im Reiter „Google Trends“", true);
       heroGrid.appendChild(card);
-      drawLineChart(card.querySelector("canvas"), gtAgg, "#d7e94a", "Index", null, dailyCharts);
+      drawLineChart(card.querySelector("canvas"), gtAgg, "#d7e94a", "Index", null, briefingCharts);
     }
   }
 
-  const fg = dailyRegionSummary(fgRegionSeriesList());
-  if(fg) heroGrid.appendChild(dailyHeroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/Tag, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, "ggü. Vortag", fg.date, "wetterabhängig verrauscht · Details im Reiter „Fußgänger“", false));
+  if(freq === "daily"){
+    const fg = dailyRegionSummary(fgRegionSeriesList());
+    if(fg) heroGrid.appendChild(heroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/Tag, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, "ggü. Vortag", fg.date, "wetterabhängig verrauscht · Details im Reiter „Fußgänger“", false));
 
-  const rv = dailyRegionSummary(rvRegionSeriesList());
-  if(rv) heroGrid.appendChild(dailyHeroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/Tag, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, "ggü. Vortag", rv.date, "wetterabhängig verrauscht · Details im Reiter „Karte (Radverkehr)“", false));
+    const rv = dailyRegionSummary(rvRegionSeriesList());
+    if(rv) heroGrid.appendChild(heroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/Tag, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, "ggü. Vortag", rv.date, "wetterabhängig verrauscht · Details im Reiter „Karte (Radverkehr)“", false));
+  } else {
+    // Woechentlich/Monatlich/Quartal: Summe des letzten VOLLSTAENDIGEN Buckets
+    // ggü. demselben Bucket im Vorjahr (siehe bucketRegionSummary) - bewusst
+    // dieselbe robuste Logik wie im Taeglich-Reiter, NICHT der Kettenindex aus
+    // Karte/Fussgaenger: der reagiert bei duennem Regionen-Overlap (typisch bei
+    // Quellen mit unterschiedlichem Meldeverzug) empfindlich auf Ausreisser.
+    const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[freq];
+    const fg = bucketRegionSummary(fgRegionSeriesList(), freq);
+    if(fg) heroGrid.appendChild(heroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/${periodLabel}, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, `ggü. ${RV_PERIOD_WORD[freq]}`, fg.date, "Details im Reiter „Fußgänger“", false));
 
-  if(!heroGrid.children.length) heroGrid.innerHTML = `<div class="empty">Noch keine Daten für die Tagesübersicht.</div>`;
+    const rv = bucketRegionSummary(rvRegionSeriesList(), freq);
+    if(rv) heroGrid.appendChild(heroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/${periodLabel}, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, `ggü. ${RV_PERIOD_WORD[freq]}`, rv.date, "Details im Reiter „Karte (Radverkehr)“", false));
+  }
+
+  if(!heroGrid.children.length) heroGrid.innerHTML = `<div class="empty">Noch keine Daten für diese Übersicht.</div>`;
 
   const health = dailyHealthSummary();
-  const healthNote = box.querySelector("#dailyHealthNote");
+  const healthNote = box.querySelector("#healthNote");
   healthNote.innerHTML = health.total
     ? `<strong>Datenlage:</strong> ${health.fresh} von ${health.total} täglichen Rohserien liefern aktuelle Werte`+
       (health.total-health.fresh>0 ? `, ${health.total-health.fresh} liefern seit ${STALE_YEAR_CUTOFF} oder früher nichts Neues mehr (⚠-Badge in den jeweiligen Reitern).` : ".")
     : "";
+
+  renderMoversSection(freq);
 }
 
 function init(){
