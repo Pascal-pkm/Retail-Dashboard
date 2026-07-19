@@ -40,6 +40,8 @@
   .badge.konzern{background:rgba(248,113,113,.15);color:var(--down)}
   .badge.branche{background:rgba(96,165,250,.15);color:#60a5fa}
   .badge.region{background:rgba(216,180,254,.15);color:#d8b4fe}
+  .badge.stale{background:rgba(251,191,36,.18);color:#fbbf24;margin-left:6px}
+  .card.stale-data,.gt-index.stale-data{border-color:rgba(251,191,36,.5)}
   .kpi-val{font-size:22px;font-weight:800;color:var(--text)}
   .kpi-chg{font-size:13px;margin-left:8px;font-weight:600}
   .up{color:var(--up)}.down{color:var(--down)}
@@ -185,6 +187,24 @@ const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFracti
 const todayISO = () => new Date().toISOString().slice(0,10);
 const addDaysISO = (iso, days) => { const d = new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10); };
 
+// Veraltete-Daten-Kennzeichnung (Nutzerwunsch 07/2026): jede Karte/jeder KPI,
+// deren/dessen neuester Datenpunkt aus STALE_YEAR_CUTOFF oder frueher stammt,
+// bekommt ein Warn-Badge. Funktioniert fuer alle Datumsformate, die im
+// Dashboard vorkommen (ISO "YYYY-MM-DD", Monats-Bucket "YYYY-MM-01",
+// Quartals-Bucket "YYYY-Qn") - alle beginnen mit der 4-stelligen Jahreszahl.
+const STALE_YEAR_CUTOFF = 2025;
+const staleYear = (dateStr) => {
+  if(!dateStr) return null;
+  const y = parseInt(String(dateStr).slice(0,4), 10);
+  return Number.isFinite(y) ? y : null;
+};
+const isStaleDate = (dateStr) => { const y = staleYear(dateStr); return y!=null && y <= STALE_YEAR_CUTOFF; };
+const staleBadge = (dateStr) => {
+  const y = staleYear(dateStr);
+  if(y==null || y > STALE_YEAR_CUTOFF) return "";
+  return `<span class="badge stale" title="Neuester verfügbarer Datenpunkt ist von ${dateStr} – diese Quelle liefert seither offenbar keine neuen Werte mehr.">⚠ Daten seit ${y} nicht aktualisiert</span>`;
+};
+
 function baseChartOptions(unitLabel, onPointClick){
   return {
     interaction:{mode:'index', intersect:false},
@@ -290,7 +310,8 @@ function render(){
         ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} %</span>`:""}
       </div>
       <canvas height="110"></canvas>
-      <div class="src">Stand: ${d} · Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</div>`;
+      <div class="src">Stand: ${d}${staleBadge(d)} · Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</div>`;
+    if(isStaleDate(d)) card.classList.add("stale-data");
     grid.appendChild(card);
     const zoomBtn = card.querySelector(".zoom-btn");
     if(zoomBtn) zoomBtn.onclick = () => { delete cardZoom[sid]; render(); };
@@ -335,13 +356,14 @@ function renderMap(){
     if(s.lat==null || s.lon==null) continue;
     const pts = s.points||[];
     const last = pts.length ? pts[pts.length-1] : null;
+    const stale = last && isStaleDate(last[0]);
     const color = REGION_COLOR[s.region] || "#9aa3ab";
     const radius = last ? 4 + 10*Math.sqrt(Math.max(last[1],0)/maxVal) : 4;
     const marker = L.circleMarker([s.lat,s.lon], {
-      radius, color, fillColor: color, fillOpacity:.55, weight:1.5,
+      radius, color: stale?"#6b7280":color, fillColor: stale?"#6b7280":color, fillOpacity: stale?.3:.55, weight:1.5,
     }).addTo(leafletMap);
     marker.bindPopup(`<strong>${s.name}</strong><br>${s.bundesland||""}<br>` +
-      (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})` : "Keine Werte") +
+      (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})${staleBadge(last[0])}` : "Keine Werte") +
       `<br><small>Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</small>`);
     mapMarkers.push(marker);
   }
@@ -496,7 +518,8 @@ function renderRvIndex(){
         :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
     </div>
     <canvas height="140"></canvas>
-    <div class="hint">Stand: ${date} · Kettenindex wie bei einem Aktienindex: jede Region geht nur mit ihrer eigenen %-Veränderung zum Vorzeitraum ein (Basis = 100 beim ersten verfügbaren Wert), nicht mit ihrem absoluten Niveau. Dadurch verzerrt weder Regionsgröße noch ein späterer Startzeitpunkt einzelner Quellen mehr das Gesamtbild. Ohne Köln (Monatsarchiv 2010–2022, seither keine neuen Daten, siehe COMPLIANCE.md).</div>`;
+    <div class="hint">Stand: ${date}${staleBadge(date)} · Kettenindex wie bei einem Aktienindex: jede Region geht nur mit ihrer eigenen %-Veränderung zum Vorzeitraum ein (Basis = 100 beim ersten verfügbaren Wert), nicht mit ihrem absoluten Niveau. Dadurch verzerrt weder Regionsgröße noch ein späterer Startzeitpunkt einzelner Quellen mehr das Gesamtbild. Ohne Köln (Monatsarchiv 2010–2022, seither keine neuen Daten, siehe COMPLIANCE.md).</div>`;
+  card.classList.toggle("stale-data", isStaleDate(date));
   drawLineChart(card.querySelector("canvas"), combined, "#d7e94a", "Punkte", null, rvIndexCharts);
 }
 
@@ -527,7 +550,8 @@ function renderRvStations(){
           :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert</span>`}
       </div>
       <canvas height="90"></canvas>
-      <div class="src">Stand: ${date}${src?` · Quelle: ${src}`:""}</div>`;
+      <div class="src">Stand: ${date}${staleBadge(date)}${src?` · Quelle: ${src}`:""}</div>`;
+    if(isStaleDate(date)) card.classList.add("stale-data");
     grid.appendChild(card);
     drawLineChart(card.querySelector("canvas"), agg, color, s.unit, null, rvStationCharts);
   }
@@ -566,7 +590,8 @@ function renderFgIndex(){
         :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
     </div>
     <canvas height="140"></canvas>
-    <div class="hint">Stand: ${date} · Kettenindex wie bei einem Aktienindex: jede Stadt geht nur mit ihrer eigenen %-Veränderung zum Vorzeitraum ein (Basis = 100 beim ersten verfügbaren Wert), nicht mit ihrem absoluten Niveau. Dadurch verzerrt weder Stadtgröße noch ein späterer Startzeitpunkt einzelner Quellen (z.B. Neuss erst seit 06/2026) das Gesamtbild.</div>`;
+    <div class="hint">Stand: ${date}${staleBadge(date)} · Kettenindex wie bei einem Aktienindex: jede Stadt geht nur mit ihrer eigenen %-Veränderung zum Vorzeitraum ein (Basis = 100 beim ersten verfügbaren Wert), nicht mit ihrem absoluten Niveau. Dadurch verzerrt weder Stadtgröße noch ein späterer Startzeitpunkt einzelner Quellen (z.B. Neuss erst seit 06/2026) das Gesamtbild.</div>`;
+  card.classList.toggle("stale-data", isStaleDate(date));
   drawLineChart(card.querySelector("canvas"), combined, "#60a5fa", "Punkte", null, fgIndexCharts);
 }
 
@@ -588,13 +613,14 @@ function renderFgMap(){
     if(s.lat==null || s.lon==null) continue;
     const pts = s.points||[];
     const last = pts.length ? pts[pts.length-1] : null;
+    const stale = last && isStaleDate(last[0]);
     const color = FG_REGION_COLOR[s.region] || "#9aa3ab";
     const radius = last ? 4 + 10*Math.sqrt(Math.max(last[1],0)/maxVal) : 4;
     const marker = L.circleMarker([s.lat,s.lon], {
-      radius, color, fillColor: color, fillOpacity:.55, weight:1.5,
+      radius, color: stale?"#6b7280":color, fillColor: stale?"#6b7280":color, fillOpacity: stale?.3:.55, weight:1.5,
     }).addTo(fgLeafletMap);
     marker.bindPopup(`<strong>${s.name}</strong><br>${s.bundesland||""}<br>` +
-      (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})` : "Keine Werte") +
+      (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})${staleBadge(last[0])}` : "Keine Werte") +
       `<br><small>Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</small>`);
     fgMapMarkers.push(marker);
   }
@@ -632,7 +658,8 @@ function renderFgStations(){
           :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert</span>`}
       </div>
       <canvas height="90"></canvas>
-      <div class="src">Stand: ${date}${src?` · Quelle: ${src}`:""}</div>`;
+      <div class="src">Stand: ${date}${staleBadge(date)}${src?` · Quelle: ${src}`:""}</div>`;
+    if(isStaleDate(date)) card.classList.add("stale-data");
     grid.appendChild(card);
     drawLineChart(card.querySelector("canvas"), agg, color, s.unit, null, fgStationCharts);
   }
@@ -811,7 +838,8 @@ function renderGtrends(){
           :idxAgg.length<2?`<span class="kpi-chg" style="color:var(--muted)">Nur 1 Datenpunkt im gewählten Zeitraum – Zeitraum vergrößern für einen Verlauf</span>`:""}
       </div>
       <canvas height="140"></canvas>
-      <div class="hint">Stand: ${d} · Klick auf einen Punkt springt eine Frequenzstufe tiefer (Quartal→Monat→Woche→Tag) und zoomt auf diesen Zeitraum.</div>`;
+      <div class="hint">Stand: ${d}${staleBadge(d)} · Klick auf einen Punkt springt eine Frequenzstufe tiefer (Quartal→Monat→Woche→Tag) und zoomt auf diesen Zeitraum.</div>`;
+    idxCard.classList.toggle("stale-data", isStaleDate(d));
     drawLineChart(idxCard.querySelector("canvas"), idxAgg, "#d7e94a", "Index", gtOnDrillClick(idxAgg));
   } else {
     idxCard.innerHTML = `<h3>Google-Trends-Index (${gtChecked.size} von ${all.length} Suchbegriffen)</h3><div class="empty">Keine Daten im gewählten Zeitraum/Auswahl</div>`;
@@ -863,7 +891,8 @@ function renderGtrends(){
             :agg.length<2?`<span class="kpi-chg" style="color:var(--muted)">Nur 1 Datenpunkt im Zeitraum</span>`:""}
         </div>
         <canvas height="110"></canvas>
-        <div class="src">Stand: ${d}${src?` · Quelle: ${src}`:""}</div>`;
+        <div class="src">Stand: ${d}${staleBadge(d)}${src?` · Quelle: ${src}`:""}</div>`;
+      if(isStaleDate(d)) card.classList.add("stale-data");
     }
     grid.appendChild(card);
     if(agg.length) drawLineChart(card.querySelector("canvas"), agg, "#60a5fa", "Index", gtOnDrillClick(agg));

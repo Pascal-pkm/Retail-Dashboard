@@ -47,7 +47,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import requests
 
-from common import USER_AGENT, add_point, http_get, upsert_series
+from common import (USER_AGENT, add_point, cache_read, cache_write, http_get,
+                    is_period_done, mark_period_done, upsert_series)
 
 SOURCE_MODULE = "radverkehr"
 STATION_MAX_POINTS = 600  # ~20 Monate taegliche Werte pro Standort - genug fuer einen
@@ -535,12 +536,24 @@ def _fetch_duesseldorf(data, stations, region_cfg, errors):
     abgelehnter Verbindungsaufbau fast sofort fehlschlaegt (kein Warten auf
     einen vollen Timeout wie bei Rostock), kosten mehr Versuche/laengere
     Pausen kaum zusaetzliche Laufzeit, geben einer kurzzeitigen Drossel aber
-    Zeit zum Abklingen."""
+    Zeit zum Abklingen.
+
+    Perioden-Cache (Nutzerwunsch 07/2026 "nur offene Zeitraeume ziehen"): ist
+    das Vorjahr bereits vollstaendig (alle Stationen ohne Fehler) eingelesen,
+    wird im naechsten Lauf nicht einmal mehr die Ressourcenliste dieses
+    Jahres abgefragt - siehe is_period_done()/mark_period_done() in
+    common.py. Nur das laufende Jahr wird immer neu abgefragt. Jede
+    erfolgreich gelesene Stations-CSV wird zusaetzlich unter
+    data_cache/duesseldorf/<jahr>/ archiviert."""
     locs = _duess_station_locations(region_cfg, errors)
     today = date.today()
     years = sorted({today.year, today.year - 1})
     fresh = {}
     for year in years:
+        period = str(year)
+        if year != today.year and is_period_done("duesseldorf", period):
+            continue  # abgeschlossenes Jahr, schon vollstaendig in data.json vorhanden
+        year_had_data, year_had_error = False, False
         for station_name, url in _duess_year_resources(region_cfg, year, errors):
             time.sleep(0.8)
             try:
@@ -548,9 +561,12 @@ def _fetch_duesseldorf(data, stations, region_cfg, errors):
                 rows = list(csv.reader(io.StringIO(r.content.decode("utf-8-sig")), delimiter=";"))
             except Exception as e:  # noqa: BLE001
                 errors.append((SOURCE_MODULE, f"duesseldorf {year} {station_name}: {e}"))
+                year_had_error = True
                 continue
             if len(rows) < 2:
                 continue
+            cache_write("duesseldorf", period, f"{_slugify(station_name)}.csv", r.content)
+            year_had_data = True
             header = rows[0]
             weather_idx = next((i for i, c in enumerate(header) if "wetter" in c.lower()), len(header))
             count_cols = list(range(1, weather_idx))
@@ -589,6 +605,8 @@ def _fetch_duesseldorf(data, stations, region_cfg, errors):
             for d_iso, val in daily_totals.items():
                 _add_station_point(st, d_iso, val)
             fresh.setdefault(key, []).extend(daily_totals.items())
+        if year != today.year and year_had_data and not year_had_error:
+            mark_period_done("duesseldorf", period)
     return fresh
 
 
@@ -631,10 +649,21 @@ def _fetch_koeln(data, stations, region_cfg, errors):
     deutsches Tausenderpunkt-Zahlenformat. Kodierung wechselt zwischen
     Jahrgaengen (mal UTF-8, mal ISO-8859-1/CP1252) - erst UTF-8 versuchen,
     sonst faellt "ü" sonst als Mojibake ("Ã¼") an und erzeugt doppelte
-    Stationsschluessel je nach Jahr."""
+    Stationsschluessel je nach Jahr.
+
+    Perioden-Cache (Nutzerwunsch 07/2026 "nur offene Zeitraeume ziehen"): ein
+    abgeschlossenes Jahr (< current_year), das schon einmal erfolgreich
+    eingelesen wurde, wird kuenftig komplett uebersprungen - dessen Punkte
+    stehen bereits dauerhaft in data.json (add_point/​_add_station_point sind
+    rein additiv, ein Ueberspringen loescht dort nichts). Nur das laufende
+    Jahr wird bei jedem Lauf neu abgefragt. Die Rohdatei jedes erfolgreich
+    gelesenen Jahres wird zusaetzlich unter data_cache/koeln/ archiviert."""
     fresh = {}
     current_year = date.today().year
     for year in range(region_cfg.get("first_year", 2010), current_year + 1):
+        period = str(year)
+        if year != current_year and is_period_done("koeln", period):
+            continue  # abgeschlossenes Jahr, schon vollstaendig in data.json vorhanden
         # Kleine Pause zwischen Requests - siehe ausfuehrlicher Kommentar in
         # _fetch_duesseldorf: offenedaten-koeln.de liegt auf derselben IP wie
         # opendata.duesseldorf.de, kombiniert erzeugen beide Fetcher genug
@@ -655,6 +684,7 @@ def _fetch_koeln(data, stations, region_cfg, errors):
             continue
         if len(rows) < 2:
             continue
+        cache_write("koeln", period, f"{year}.csv", raw)
         header = rows[0]
         for row in rows[1:]:
             if not row or not row[0].strip():
@@ -680,6 +710,8 @@ def _fetch_koeln(data, stations, region_cfg, errors):
                 )
                 _add_station_point(st, d_iso, val, max_points=region_cfg.get("station_max_points", 200))
                 fresh.setdefault(key, []).append((d_iso, val))
+        if year != current_year:
+            mark_period_done("koeln", period)
     return fresh
 
 

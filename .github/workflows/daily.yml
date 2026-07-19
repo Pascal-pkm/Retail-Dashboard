@@ -34,13 +34,14 @@ jobs:
           GTRENDS_BACKFILL_TIMEFRAME: ${{ inputs.gtrends_backfill_timeframe }}
         run: python scripts/run_update.py daily
 
-      - name: data.json committen
+      - name: data.json + Perioden-Cache committen
         env:
           GTRENDS_BACKFILL_TIMEFRAME: ${{ inputs.gtrends_backfill_timeframe }}
         run: |
           git config user.name "kpi-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/data.json
+          mkdir -p data_cache   # Perioden-Cache (common.py) - Verzeichnis existiert erst nach dem allerersten Lauf mit Inhalt
+          git add docs/data.json data_cache/
           git diff --cached --quiet && { echo "Keine Aenderungen."; exit 0; }
           git commit -m "Daten-Update (täglich) $(date -u +%F)"
           for i in 1 2 3 4 5; do
@@ -57,7 +58,8 @@ jobs:
             git rebase --abort
             git reset --hard origin/main
             python scripts/run_update.py daily
-            git add docs/data.json
+            mkdir -p data_cache   # Perioden-Cache (common.py) - Verzeichnis existiert erst nach dem allerersten Lauf mit Inhalt
+          git add docs/data.json data_cache/
             git diff --cached --quiet && { echo "Keine Aenderungen nach Neuaufbau."; exit 0; }
             git commit -m "Daten-Update (täglich) $(date -u +%F)"
             sleep $((RANDOM % 6 + 2))

@@ -9,6 +9,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "docs" / "data.json"
 CONFIG_PATH = ROOT / "config" / "config.json"
+CACHE_DIR = ROOT / "data_cache"
 
 MAX_POINTS = {"daily": 1600, "weekly": 260, "monthly": 300, "quarterly": 40}
 # daily=1600 (~4,4 Jahre) statt frueher 730, damit ein Hystreet-Backfill ab 2024
@@ -91,6 +92,52 @@ def http_get(url, *, headers=None, params=None, retries=3, timeout=40, backoff=5
 
 def http_get_json(url, **kw):
     return http_get(url, **kw).json()
+
+
+# --- Perioden-Cache (abgeschlossene Zeitraeume nicht erneut abrufen) ------
+# Mehrere Quellen fragen Historie in Jahres-/Monatshaeppchen ab (Koeln: 2010
+# bis heute, Duesseldorf/Oldenburg/Moers: aktuelles+Vorjahr, ...). Ein Jahr/
+# Monat, das bereits VOLLSTAENDIG und erfolgreich abgerufen wurde und in der
+# Vergangenheit liegt (nicht die laufende, noch "offene" Periode), aendert
+# sich danach nicht mehr - es erneut abzufragen kostet nur Zeit/Traffic ohne
+# neuen Nutzen. is_period_done()/mark_period_done() setzen dafuer pro Quelle
+# und Periode eine leere Marker-Datei; cache_write()/cache_read() sichern
+# zusaetzlich die zuletzt heruntergeladene Rohdatei auf Platte (Nutzerwunsch:
+# "alle Dateien gespeichert werden") - unabhaengig von data.json, das durch
+# MAX_POINTS irgendwann aeltere Einzelpunkte kappt. Cache-Verzeichnis wird von
+# den GitHub-Actions-Workflows mit committet, sonst ginge der Effekt bei jedem
+# Lauf auf einem frischen Runner wieder verloren.
+
+def _cache_key_path(source: str, period: str) -> Path:
+    safe_source = source.replace("/", "_")
+    safe_period = str(period).replace("/", "_")
+    return CACHE_DIR / safe_source / safe_period
+
+
+def is_period_done(source: str, period: str) -> bool:
+    """True, wenn diese Periode (z.B. Jahr '2024' oder Monat '2025-03') fuer
+    diese Quelle schon einmal vollstaendig+erfolgreich abgerufen wurde."""
+    return _cache_key_path(source, period).with_suffix(".done").exists()
+
+
+def mark_period_done(source: str, period: str) -> None:
+    p = _cache_key_path(source, period).with_suffix(".done")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.touch()
+
+
+def cache_write(source: str, period: str, filename: str, content: bytes) -> None:
+    """Rohdatei einer Periode dauerhaft sichern (Archiv, nicht zwingend fuer
+    den naechsten Lauf noetig, aber schuetzt vor Datenverlust durch
+    MAX_POINTS-Kappung und macht data.json bei Bedarf reproduzierbar)."""
+    p = _cache_key_path(source, period) / filename
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(content)
+
+
+def cache_read(source: str, period: str, filename: str):
+    p = _cache_key_path(source, period) / filename
+    return p.read_bytes() if p.exists() else None
 
 
 def upsert_series(data, sid, *, label, frequency, unit, scope, source, source_url=""):

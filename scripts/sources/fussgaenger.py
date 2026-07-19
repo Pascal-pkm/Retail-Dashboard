@@ -33,9 +33,11 @@ Rohdaten direkt als Datei bereit.
 import csv
 import gzip
 import io
+import re
 from datetime import date
 
-from common import add_point, http_get, upsert_series
+from common import (add_point, cache_write, http_get, is_period_done,
+                    mark_period_done, upsert_series)
 
 SOURCE_MODULE = "fussgaenger"
 STATION_MAX_POINTS = 600
@@ -77,12 +79,19 @@ def _add_station_point(station, date_str, value, max_points=STATION_MAX_POINTS):
 
 
 # --- Oldenburg (Hystreet-Sensoren, von der Stadt selbst re-publiziert) ----
+# Perioden-Cache (Nutzerwunsch 07/2026 "nur offene Zeitraeume ziehen"): das
+# Vorjahres-Jahresarchiv aendert sich nach erfolgreichem Einlesen nicht mehr -
+# wird uebersprungen, sobald einmal erfolgreich geladen. Nur das laufende
+# Jahr wird immer neu abgefragt. Rohdatei wird zusaetzlich archiviert.
 
 def _fetch_oldenburg(region_cfg, stations, errors):
     today = date.today()
     years = sorted({today.year, today.year - 1})
     daily_by_loc = {}
     for year in years:
+        period = str(year)
+        if year != today.year and is_period_done("oldenburg", period):
+            continue  # abgeschlossenes Jahr, schon vollstaendig in data.json vorhanden
         url = region_cfg["csv_url_template"].format(year=year)
         try:
             r = http_get(url, timeout=REQUEST_TIMEOUT, retries=REQUEST_RETRIES)
@@ -93,6 +102,9 @@ def _fetch_oldenburg(region_cfg, stations, errors):
         except Exception as e:  # noqa: BLE001
             errors.append((SOURCE_MODULE, f"oldenburg {year}: {e}"))
             continue
+        if not rows:
+            continue
+        cache_write("oldenburg", period, f"{year}.csv", r.content)
         for row in rows:
             loc = (row.get("location") or "").strip()
             ts = row.get("time of measurement") or ""
@@ -104,6 +116,8 @@ def _fetch_oldenburg(region_cfg, stations, errors):
             except ValueError:
                 continue
             daily_by_loc.setdefault(loc, {})[ts[:10]] = v
+        if year != today.year:
+            mark_period_done("oldenburg", period)
 
     fresh = {}
     for loc, day_vals in daily_by_loc.items():
@@ -181,9 +195,16 @@ def _fetch_wuerzburg(region_cfg, stations, errors):
 # Wert dort garantiert identisch ist (live verifiziert 07/2026).
 
 def _fetch_dortmund_fg(region_cfg, stations, errors):
-    years = region_cfg.get("years") or [date.today().year]
+    # Perioden-Cache (Nutzerwunsch 07/2026 "nur offene Zeitraeume ziehen"):
+    # abgeschlossene Jahrgaenge (< aktuelles Jahr), einmal erfolgreich
+    # eingelesen, werden kuenftig uebersprungen - siehe common.is_period_done.
+    current_year = date.today().year
+    years = region_cfg.get("years") or [current_year]
     hourly = {}
     for year in years:
+        period = str(year)
+        if year != current_year and is_period_done("dortmund_fg", period):
+            continue  # abgeschlossenes Jahr, schon vollstaendig in data.json vorhanden
         url = region_cfg["csv_url_template"].format(year=year)
         try:
             r = http_get(url, timeout=90, retries=REQUEST_RETRIES)
@@ -195,6 +216,9 @@ def _fetch_dortmund_fg(region_cfg, stations, errors):
         except Exception as e:  # noqa: BLE001
             errors.append((SOURCE_MODULE, f"dortmund {year}: {e}"))
             continue
+        if not rows:
+            continue
+        cache_write("dortmund_fg", period, f"{year}.csv", r.content)
         for row in rows:
             standort = (row.get("Standort") or "").strip()
             ts = row.get("Messzeitpunkt") or ""
@@ -206,6 +230,8 @@ def _fetch_dortmund_fg(region_cfg, stations, errors):
             except ValueError:
                 continue
             hourly[(standort, ts[:13])] = v
+        if year != current_year:
+            mark_period_done("dortmund_fg", period)
 
     daily_by_loc = {}
     for (standort, hour_key), v in hourly.items():
@@ -396,8 +422,21 @@ def _fetch_augsburg(region_cfg, stations, errors):
 # gibt es pro Monat eine Tages- ("nach Tagen") und eine Stunden-Datei - wir
 # nutzen nur die Tagesdateien (passt zur Aufloesung der uebrigen Regionen).
 
+_MOERS_MONTHS = {
+    "januar": 1, "februar": 2, "märz": 3, "april": 4, "mai": 5, "juni": 6,
+    "juli": 7, "august": 8, "september": 9, "oktober": 10, "november": 11, "dezember": 12,
+}
+_MOERS_MONTH_RE = re.compile(r"im\s+(\w+)\s+(\d{4})", re.IGNORECASE)
+
+
 def _fetch_moers(region_cfg, stations, errors):
-    years = sorted({date.today().year, date.today().year - 1})
+    # Perioden-Cache (Nutzerwunsch 07/2026 "nur offene Zeitraeume ziehen"): pro
+    # CKAN-Paket (Jahr) gibt es eine Tagesdatei je Monat - ein abgeschlossener
+    # Monat (nicht der laufende) wird nach erfolgreichem Einlesen uebersprungen.
+    # Laesst sich der Monat aus dem Ressourcennamen nicht sicher bestimmen,
+    # wird sicherheitshalber IMMER neu abgefragt (kein Cache-Skip).
+    today = date.today()
+    years = sorted({today.year, today.year - 1})
     daily = {}
     for year in years:
         package_id = region_cfg["package_id_template"].format(year=year)
@@ -411,16 +450,30 @@ def _fetch_moers(region_cfg, stations, errors):
             errors.append((SOURCE_MODULE, f"moers {year}: {e}"))
             continue
         for res in pkg.get("resources", []):
-            name = (res.get("name") or "").lower()
+            res_name = res.get("name") or ""
+            name = res_name.lower()
             url = res.get("url") or ""
             if "nach tag" not in name and "-taglich" not in url:
                 continue
+
+            m = _MOERS_MONTH_RE.search(res_name)
+            res_month = _MOERS_MONTHS.get(m.group(1).lower()) if m else None
+            res_year = int(m.group(2)) if m else year
+            period = f"{res_year}-{res_month:02d}" if res_month else None
+            is_closed = period is not None and (res_year, res_month) < (today.year, today.month)
+            if is_closed and is_period_done("moers", period):
+                continue  # abgeschlossener Monat, schon vollstaendig in data.json vorhanden
+
             try:
                 rr = http_get(url, timeout=REQUEST_TIMEOUT, retries=REQUEST_RETRIES)
                 rows = list(csv.DictReader(io.StringIO(rr.content.decode("utf-8-sig")), delimiter=";"))
             except Exception as e:  # noqa: BLE001
                 errors.append((SOURCE_MODULE, f"moers {year} ({res.get('name')}): {e}"))
                 continue
+            if not rows:
+                continue
+            if period:
+                cache_write("moers", period, "daily.csv", rr.content)
             for row in rows:
                 ts = row.get("time of measurement") or ""
                 val = row.get("pedestrians count")
@@ -431,6 +484,8 @@ def _fetch_moers(region_cfg, stations, errors):
                 except ValueError:
                     continue
                 daily[ts[:10]] = v
+            if is_closed:
+                mark_period_done("moers", period)
 
     if not daily:
         return {}
@@ -489,8 +544,16 @@ def _fetch_berlin_telraam(region_cfg, stations, errors):
         if m == 0:
             m, y = 12, y - 1
 
+    # Perioden-Cache (Nutzerwunsch 07/2026 "nur offene Zeitraeume ziehen"): der
+    # jeweils vorherige Monat aendert sich nach erfolgreichem Einlesen nicht
+    # mehr - wird uebersprungen, sobald einmal erfolgreich geladen. Nur der
+    # laufende Monat wird bei jedem Lauf neu abgefragt.
     daily_by_seg = {}
     for y, m in months:
+        period = f"{y}-{m:02d}"
+        is_open = (y, m) == (today.year, today.month)
+        if not is_open and is_period_done("berlin_telraam", period):
+            continue  # abgeschlossener Monat, schon vollstaendig in data.json vorhanden
         url = region_cfg["csv_url_template"].format(year=y, month=m)
         try:
             r = http_get(url, timeout=60, retries=REQUEST_RETRIES)
@@ -509,6 +572,9 @@ def _fetch_berlin_telraam(region_cfg, stations, errors):
         except Exception as e:  # noqa: BLE001
             errors.append((SOURCE_MODULE, f"berlin {y}-{m:02d}: {e}"))
             continue
+        if not rows:
+            continue
+        cache_write("berlin_telraam", period, "segments.csv", raw)
         for row in rows:
             sid = row.get("segment_id")
             ts = row.get("date_local") or ""
@@ -522,6 +588,8 @@ def _fetch_berlin_telraam(region_cfg, stations, errors):
             d_iso = ts[:10]
             daily_by_seg.setdefault(sid, {})
             daily_by_seg[sid][d_iso] = daily_by_seg[sid].get(d_iso, 0.0) + v
+        if not is_open:
+            mark_period_done("berlin_telraam", period)
 
     fresh = {}
     for sid, day_vals in daily_by_seg.items():
