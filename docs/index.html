@@ -391,15 +391,54 @@ function rvRegionSeriesList(){
 // weiterhin sichtbar, zaehlt aber nicht in den kombinierten Gesamt-Index hinein.
 const RV_INDEX_EXCLUDED_REGIONS = new Set(["radverkehr_region_nrw_koeln"]);
 
-function rvCombinedRaw(){
-  const byDate = new Map();
+// Kettenindex (Basis=100, wie bei einem Aktienindex): jede Region geht nur mit ihrer
+// EIGENEN prozentualen Veraenderung von einem Bucket zum naechsten ein, nicht mit
+// ihrem absoluten Wert. Eine Region zaehlt fuer einen Bucket nur mit, wenn sie SOWOHL
+// im aktuellen als auch im vorherigen Bucket einen Wert hat - dadurch verzerrt weder
+// eine grosse Region (z.B. Baden-Wuerttemberg mit 200.000+/Tag) noch eine neu
+// hinzukommende Region (unterschiedliche Startdaten je Quelle, siehe COMPLIANCE.md)
+// das Gesamtbild wie zuvor bei der reinen Summe (dort sorgte jede neu einsetzende
+// Region fuer einen Stufensprung nach oben, unabhaengig vom tatsaechlichen Trend).
+function rvChainedIndex(freq){
+  const perRegion = new Map();
   for(const [sid,s] of rvRegionSeriesList()){
     if(RV_INDEX_EXCLUDED_REGIONS.has(sid)) continue;
-    for(const [d,v] of s.points){
-      byDate.set(d, (byDate.get(d)||0) + v);
-    }
+    // Erster Bucket einer Region faellt weg: eine Quelle startet fast nie exakt am
+    // Bucket-Anfang (z.B. Hamburg: Feed begann Ende Dezember -> "Dezember" enthaelt nur
+    // ein paar Tage statt des vollen Monats). Dieser Teilzeitraum waere als Wachstums-
+    // basis fuer den naechsten (vollen) Bucket eine Scheinveraenderung von mehreren
+    // hundert Prozent und wuerde den Kettenindex trotz Geometrie-Mittel verzerren.
+    const agg = rvAggregateSum(s.points, freq).slice(1);
+    if(agg.length) perRegion.set(sid, new Map(agg));
   }
-  return [...byDate.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+  const buckets = [...new Set([].concat(...[...perRegion.values()].map(m=>[...m.keys()])))].sort();
+  const out = [];
+  let level = null;
+  for(let i=0; i<buckets.length; i++){
+    const b = buckets[i];
+    if(level===null){
+      level = 100;
+    } else {
+      const prevB = buckets[i-1];
+      const ratios = [];
+      for(const m of perRegion.values()){
+        const cur = m.get(b), prev = m.get(prevB);
+        if(cur!=null && prev!=null && prev>0 && cur>0) ratios.push(cur/prev);
+      }
+      if(ratios.length){
+        // Geometrisches statt arithmetisches Mittel der Veraenderungsfaktoren: eine
+        // einzelne Region mit z.B. +900% (Faktor 10) reisst ein arithmetisches Mittel
+        // ueber mehrere Regionen extrem nach oben; geometrisch wirkt sie proportional
+        // zu ihrem tatsaechlichen Anteil an der Gesamtbewegung - Standardtechnik bei
+        // Kettenindizes mit heterogenen/wechselnden Bestandteilen.
+        const logSum = ratios.reduce((a,r)=>a+Math.log(r), 0);
+        level *= Math.exp(logSum / ratios.length);
+      }
+      // keine ueberlappenden Regionen zwischen den beiden Buckets -> Level haelt (kein Sprung)
+    }
+    out.push([b, level]);
+  }
+  return out;
 }
 
 function renderRvFilterbar(){
@@ -415,7 +454,7 @@ function renderRvFilterbar(){
 
 function renderRvIndex(){
   rvIndexCharts.forEach(c=>c.destroy()); rvIndexCharts=[];
-  const combined = rvAggregateSum(rvCombinedRaw(), rvFreq);
+  const combined = rvChainedIndex(rvFreq);
   const card = document.getElementById("rvIndexCard");
   const nRegions = rvRegionSeriesList().filter(([sid])=>!RV_INDEX_EXCLUDED_REGIONS.has(sid)).length;
   if(!combined.length){
@@ -423,16 +462,15 @@ function renderRvIndex(){
     return;
   }
   const {value, chg, date} = rvYoY(combined, rvFreq);
-  const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[rvFreq];
-  card.innerHTML = `<h3>Radverkehr-Gesamtindex (Summe von ${nRegions} Regionen)</h3>
-    <div><span class="kpi-val">${fmt(value,0)}</span>
-      <span style="font-size:12px;color:var(--muted)">Fahrräder / ${periodLabel}</span>
+  card.innerHTML = `<h3>Radverkehr-Gesamtindex (Kettenindex aus ${nRegions} Regionen, Basis 100)</h3>
+    <div><span class="kpi-val">${fmt(value,1)}</span>
+      <span style="font-size:12px;color:var(--muted)">Punkte</span>
       ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[rvFreq]}</span>`
         :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
     </div>
     <canvas height="140"></canvas>
-    <div class="hint">Stand: ${date} · Ohne Köln (Monatsarchiv 2010–2022, seither keine neuen Daten - würde den Verlauf verzerren, siehe COMPLIANCE.md). Da Regionen zu unterschiedlichen Zeitpunkten hinzugekommen sind, wächst die Summe an diesen Stellen sprunghaft (mehr Zählstellen, nicht zwingend mehr Verkehr).</div>`;
-  drawLineChart(card.querySelector("canvas"), combined, "#d7e94a", "Fahrräder", null, rvIndexCharts);
+    <div class="hint">Stand: ${date} · Kettenindex wie bei einem Aktienindex: jede Region geht nur mit ihrer eigenen %-Veränderung zum Vorzeitraum ein (Basis = 100 beim ersten verfügbaren Wert), nicht mit ihrem absoluten Niveau. Dadurch verzerrt weder Regionsgröße noch ein späterer Startzeitpunkt einzelner Quellen mehr das Gesamtbild. Ohne Köln (Monatsarchiv 2010–2022, seither keine neuen Daten, siehe COMPLIANCE.md).</div>`;
+  drawLineChart(card.querySelector("canvas"), combined, "#d7e94a", "Punkte", null, rvIndexCharts);
 }
 
 function renderRvStations(){
