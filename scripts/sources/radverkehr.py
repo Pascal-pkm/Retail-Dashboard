@@ -20,16 +20,23 @@ Kreis Viersen, Rhein-Kreis-Neuss und GEOportal.NRW haben keine eigenen offen
 lizenzierten Messwert-Datensaetze (nur Infrastruktur-/Planungsdaten bzw.
 Standort-Metadaten ohne Zaehlwerte) und wurden daher nicht aufgenommen.
 
+Norddeutschland/Kueste-Recherche 2026-07 (Nutzeranfrage: "Gibt es noch mehr
+Frequenzen? Die Kueste ist interessant"): Rostock (Ostseekueste, u.a. Warne-
+muende, Graal-Mueritz) neu aufgenommen - CC0-1.0, siehe COMPLIANCE.md. Bremen
+gepueft, aber keine offizielle offene Lizenz gefunden (nur inoffiziell doku-
+mentierter Scrape-Zugang) - nicht aufgenommen. Kiel/Luebeck/Flensburg/Sylt/
+Wilhelmshaven/Cuxhaven/Nordfriesland: keine eigenen offenen Messwert-Daten-
+saetze gefunden.
+
 Zwei Arten von Output in data.json:
   1. data["series"]["radverkehr_region_<region>"] - EINE Summen-Serie pro
      Region (scope="region", frequency="daily"/"weekly"/"monthly" je nach
-     Quellgranularitaet), landet im normalen Frequenz-Grid + in der
-     automatischen Kommentierung wie jede andere Serie.
-  2. data["radverkehr_stations"][...] - Einzelstandorte mit lat/lon fuer die
-     Kartenansicht (Task 11). Wird NICHT im normalen Card-Grid gerendert
-     (sonst wuerden 150+ Karten die Seite sprengen); History pro Standort ist
-     bewusst kurz gehalten (STATION_MAX_POINTS), um data.json klein zu halten -
-     die lange Historie steckt in der Region-Summenserie.
+     Quellgranularitaet), landet NICHT mehr im normalen Frequenz-Grid (dort nur
+     verwirrend neben Aktienkursen etc.), sondern ausschliesslich im Karte-Tab
+     als Gesamt-Index (siehe docs/index.html).
+  2. data["radverkehr_stations"][...] - Einzelstandorte mit lat/lon; werden im
+     Karte-Tab sowohl auf der Karte als auch als eigene Liste mit Vorjahres-
+     vergleich gerendert (STATION_MAX_POINTS haelt dafuer ausreichend Historie).
 """
 import csv
 import io
@@ -37,7 +44,9 @@ import math
 import re
 from datetime import date, datetime, timedelta, timezone
 
-from common import add_point, http_get, upsert_series
+import requests
+
+from common import USER_AGENT, add_point, http_get, upsert_series
 
 SOURCE_MODULE = "radverkehr"
 STATION_MAX_POINTS = 600  # ~20 Monate taegliche Werte pro Standort - genug fuer einen
@@ -651,6 +660,109 @@ def _fetch_koeln(data, stations, region_cfg, errors):
     return fresh
 
 
+# ------------------------------------------------------------- Rostock ----
+
+ROSTOCK_TAIL_BYTES = 30_000_000  # ~30 MB vom Dateiende statt der kompletten,
+# taeglich wachsenden Datei (Stand 07/2026: 154 MB, seit 11/2013 15-Minuten-
+# Werte). Die neuesten Zeilen stehen immer ganz am Ende (taeglich angehaengte
+# Bloecke je Station), 30 MB decken so weit mehr als STATION_MAX_POINTS Tage
+# fuer alle 11 Stationen ab. Server unterstuetzt HTTP-Range (verifiziert
+# 07/2026: "Accept-Ranges: bytes", 206 Partial Content).
+
+
+def _rostock_tail_lines(url, errors):
+    # Echtes HTTP HEAD (nicht GET mit Range:bytes=0-0!) fuer die Dateigroesse -
+    # sonst wuerde bei einem Netzwerkpfad, der Range-Requests ignoriert (siehe
+    # Fallback unten), bereits die Groessen-Abfrage die komplette 150+MB-Datei
+    # unnoetig ein zweites Mal uebertragen.
+    total = 0
+    try:
+        head = requests.head(url, headers={"User-Agent": USER_AGENT}, timeout=REQUEST_TIMEOUT, allow_redirects=True)
+        total = int(head.headers.get("Content-Length", 0) or 0)
+    except Exception as e:  # noqa: BLE001
+        errors.append((SOURCE_MODULE, f"rostock: Dateigroesse nicht ermittelbar - {e}"))
+
+    range_start = max(0, total - ROSTOCK_TAIL_BYTES) if total > ROSTOCK_TAIL_BYTES else 0
+    r = http_get(url, headers={"Range": f"bytes={range_start}-"} if range_start else None,
+                 timeout=180, retries=REQUEST_RETRIES)
+    content = r.content
+
+    # Sicherheitsnetz UNABHAENGIG davon, ob range_start oben berechnet werden
+    # konnte: manche Proxies/Server ignorieren den Range-Header und liefern
+    # trotzdem die komplette Datei (200 statt 206), und falls schon die HEAD-
+    # Anfrage fehlschlug (total=0) wurde oben gar kein Range-Header gesendet.
+    # In beiden Faellen hier clientseitig auf die letzten ROSTOCK_TAIL_BYTES
+    # zuschneiden, sonst wuerde die taeglich wachsende Datei jeden Tag mehr
+    # Verarbeitungszeit kosten (verifiziert 07/2026: curl bekam 206, requests
+    # in diesem Netzwerkpfad teils 200 mit voller Datei).
+    sliced = False
+    if len(content) > ROSTOCK_TAIL_BYTES * 1.2:
+        content = content[-ROSTOCK_TAIL_BYTES:]
+        sliced = True
+
+    lines = content.decode("utf-8", errors="replace").split("\n")
+    if range_start or sliced:
+        lines = lines[1:]  # erste Zeile ist durch den Schnitt evtl. unvollstaendig
+    return lines
+
+
+def _fetch_rostock(data, stations, region_cfg, errors):
+    """Radmonitore Rostock (geo.sv.rostock.de, CC0-1.0): 15-Minuten-Zaehlwerte
+    je Standort in einer einzigen, fortlaufend wachsenden CSV - siehe
+    ROSTOCK_TAIL_BYTES fuer die inkrementelle Abhol-Strategie. Werte werden
+    hier zu Tagessummen je Standort aggregiert."""
+    locs = {}
+    try:
+        geo = http_get(region_cfg["locations_url"], timeout=REQUEST_TIMEOUT, retries=REQUEST_RETRIES).json()
+        for feat in geo.get("features", []):
+            props = feat.get("properties", {})
+            coords = (feat.get("geometry") or {}).get("coordinates", [None, None])
+            locs[str(props.get("id"))] = {"name": props.get("bezeichnung"), "lat": coords[1], "lon": coords[0]}
+    except Exception as e:  # noqa: BLE001
+        errors.append((SOURCE_MODULE, f"rostock: Standorte - {e}"))
+
+    lines = _rostock_tail_lines(region_cfg["data_url"], errors)
+    daily = {}  # station_id -> {date_iso: summe}
+    # Bewusst KEIN csv.reader pro Zeile (bei 700-800k Zeilen im 30-MB-Tail spuerbar
+    # langsam) - das Format hat keine eingebetteten Kommas/Anfuehrungszeichen in den
+    # Feldern selbst, ein einfacher Split reicht und ist um ein Vielfaches schneller.
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("standort_id"):
+            continue
+        parts = line.split(",")
+        if len(parts) != 3:
+            continue
+        sid = parts[0].strip().strip('"')
+        ts, val = parts[1], parts[2]
+        if len(ts) < 10:
+            continue
+        d_iso = ts[:10].replace("/", "-")
+        try:
+            v = float(val)
+        except ValueError:
+            continue
+        daily.setdefault(sid, {})
+        daily[sid][d_iso] = daily[sid].get(d_iso, 0.0) + v
+
+    fresh = {}
+    for sid, day_sums in daily.items():
+        loc = locs.get(sid, {"name": sid, "lat": None, "lon": None})
+        key = f"rostock_{sid}"
+        st = _station(
+            stations, key, name=f"Rostock – {loc['name'] or sid}",
+            lat=loc["lat"], lon=loc["lon"],
+            bundesland=region_cfg["bundesland"], region="rostock",
+            source=region_cfg["source"], source_url=region_cfg.get("source_url", ""),
+        )
+        pts = []
+        for d_iso, val in day_sums.items():
+            _add_station_point(st, d_iso, val)
+            pts.append((d_iso, val))
+        fresh[key] = pts
+    return fresh
+
+
 # --------------------------------------------------------------- Main -----
 
 REGION_FETCHERS = {
@@ -660,6 +772,7 @@ REGION_FETCHERS = {
     "nrw_muenster": _fetch_nrw_muenster,
     "nrw_dortmund": _fetch_dortmund,
     "nrw_duesseldorf": _fetch_duesseldorf,
+    "rostock": _fetch_rostock,
 }
 
 

@@ -89,7 +89,7 @@
     <span class="badge branche">Branche/Gesamtmarkt</span>.
     Bon-KPIs (Bonanzahl, Teile/Bon, Ø-Bonwert) je Standort sind <em>nicht öffentlich verfügbar</em>;
     die nächste Annäherung sind konzernweite Quartalskennzahlen (z.&nbsp;B. AOV) aus IR-Berichten.
-    Radverkehr-Zählstellen (Fahrrad, nicht Fußgänger!) aus 8 Regionen dienen nur als grober Tendenz-Proxy für
+    Radverkehr-Zählstellen (Fahrrad, nicht Fußgänger!) aus 9 Regionen dienen nur als grober Tendenz-Proxy für
     Wegefrequenzen und sind komplett im eigenen Reiter <strong>„Karte (Radverkehr)"</strong> zu finden – dort mit
     Gesamt-Index, Kartenansicht und allen Einzelstandorten inkl. Vorjahresvergleich.
     <em>Klick auf einen Graphen zoomt in den umliegenden Zeitraum – „Zoom zurücksetzen" oben rechts an der Karte macht das rückgängig.</em></div>
@@ -99,7 +99,7 @@
   <div class="errors" id="errors" hidden></div>
   <div id="mapview" hidden>
     <h2 style="font-size:15px;color:var(--accent)">Radverkehr-Zählstellen (Tendenz-Proxy für Wegefrequenzen)</h2>
-    <p style="font-size:13px;color:var(--muted);margin-top:4px">Fahrrad-Dauerzählstellen aus 8 frei zugänglichen Regionen (Baden-Württemberg, Hamburg, Leipzig, München,
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">Fahrrad-Dauerzählstellen aus 9 frei zugänglichen Regionen (Baden-Württemberg, Hamburg, Leipzig, München, Rostock/Ostseeküste,
       sowie Münster, Dortmund, Düsseldorf und Köln in NRW). <strong>Kein Fußgänger-Proxy</strong>, sondern Radverkehr – als grober Trendindikator zu verstehen.
       Tageswerte sind wetter-/saisonabhängig stark verrauscht, daher hier nur wöchentlich/monatlich/quartalsweise aggregiert mit Vorjahresvergleich.</p>
     <div class="subnav" id="rvFilterbar"></div>
@@ -125,11 +125,11 @@ const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatl
 const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt", region:"Regional-Index (Radverkehr-Proxy)"};
 const REGION_COLOR = {
   bw:"#d7e94a", hamburg:"#f87171", leipzig:"#6ee7a0", muenchen:"#fb923c", nrw_muenster:"#c084fc",
-  nrw_dortmund:"#38bdf8", nrw_duesseldorf:"#fbbf24", nrw_koeln:"#f472b6",
+  nrw_dortmund:"#38bdf8", nrw_duesseldorf:"#fbbf24", nrw_koeln:"#f472b6", rostock:"#2dd4bf",
 };
 const REGION_LABEL = {
   bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)",
-  nrw_dortmund:"Dortmund (NRW)", nrw_duesseldorf:"Düsseldorf (NRW)", nrw_koeln:"Köln (NRW)",
+  nrw_dortmund:"Dortmund (NRW)", nrw_duesseldorf:"Düsseldorf (NRW)", nrw_koeln:"Köln (NRW)", rostock:"Rostock (Ostseeküste)",
 };
 const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
 const RV_SUBFREQS = [["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];

@@ -116,6 +116,16 @@
         "first_year": 2010,
         "station_max_points": 200,
         "_hinweis": "Monatssummen pro Zaehlstelle (~17 Stationen). Datenstand seit 2022 nicht mehr aktualisiert (Stand 07/2026) - dennoch offen (DL-DE-Zero) lizenziert, daher aufgenommen."
+      },
+      "rostock": {
+        "name": "Rostock (Radmonitore, Ostseeküste)",
+        "bundesland": "Mecklenburg-Vorpommern",
+        "source": "geo.sv.rostock.de",
+        "source_url": "https://www.opendata-hro.de/dataset/radmonitore",
+        "license": "cc0-1.0",
+        "locations_url": "https://geo.sv.rostock.de/download/opendata/radmonitore/radmonitore_standorte.json",
+        "data_url": "https://geo.sv.rostock.de/download/opendata/radmonitore/radmonitore_daten.csv",
+        "_hinweis": "11 Zaehlstellen inkl. Kuesten-/Badeorten (Warnemünde Wetterwarte, Markgrafenheide, Graal-Müritz). Datenquelle ist eine einzelne, taeglich wachsende CSV (Stand 07/2026: 154 MB, 15-Minuten-Werte seit 11/2013) - siehe ROSTOCK_TAIL_BYTES in radverkehr.py fuer die inkrementelle Abhol-Strategie per HTTP-Range statt Vollabruf."
       }
     }
   },

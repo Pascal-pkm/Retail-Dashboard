@@ -45,9 +45,9 @@ Eurostat-Daten dürfen laut Eurostat-Lizenzpolitik (CC BY 4.0-basiert) frei weit
 - **ifo (Fallback-Weg):** Falls der direkte ifo-Abruf scheitert (siehe Abschnitt 7), greift ersatzweise die Kennzahl aus der öffentlichen Destatis-Pressemitteilung mit Quellenangabe (Zitatrecht/Pressemitteilungscharakter); keine Vervielfältigung ganzer Publikationen.
 - **IR-Berichte:** öffentliche Pflichtveröffentlichungen; wir speichern Links + einzelne Kennzahlen mit Quellenangabe, keine PDF-/XLSX-Weiterverbreitung. Bei Zalando werden seit 07/2026 rein numerische Kennzahlen (keine Formatierung, Kommentare oder Layout) aus der öffentlich zum Download bereitgestellten „Financials XLS" strukturiert ausgelesen (statt einzelner Werte per PDF-Text-Regex) – die Rohdatei selbst wird nicht gespeichert oder veröffentlicht, nur die extrahierten Zahlen mit Link zur offiziellen Quelle.
 
-## 5. Radverkehr-Dauerzählstellen (8 Regionen, Stand 07/2026) — ✅ unkritisch, Lizenz je Region geprüft
+## 5. Radverkehr-Dauerzählstellen (9 Regionen, Stand 07/2026) — ✅ unkritisch, Lizenz je Region geprüft
 
-Nutzerentscheidung 2026-07: Da Hystreet pausiert ist und Destatis' eigene Passantenfrequenz-Erhebung zum 31.12.2025 eingestellt wurde, wird als bundesweiter **Näherungswert** (ausdrücklich KEINE Fußgängerzahlen) auf offene Fahrrad-Dauerzählstellen zurückgegriffen. Alle acht verwendeten Regionen wurden einzeln auf Format und Lizenz geprüft:
+Nutzerentscheidung 2026-07: Da Hystreet pausiert ist und Destatis' eigene Passantenfrequenz-Erhebung zum 31.12.2025 eingestellt wurde, wird als bundesweiter **Näherungswert** (ausdrücklich KEINE Fußgängerzahlen) auf offene Fahrrad-Dauerzählstellen zurückgegriffen. Alle neun verwendeten Regionen wurden einzeln auf Format und Lizenz geprüft:
 
 | Region | Quelle | Lizenz |
 |---|---|---|
@@ -59,8 +59,15 @@ Nutzerentscheidung 2026-07: Da Hystreet pausiert ist und Destatis' eigene Passan
 | Dortmund (NRW) | open-data.dortmund.de (OpenDataSoft-API) | **dl-de/zero-2.0** |
 | Düsseldorf (NRW) | opendata.duesseldorf.de | dl-de/by-2.0 |
 | Köln (NRW) | offenedaten-koeln.de | **dl-de/zero-2.0** |
+| Rostock (Ostseeküste) | opendata-hro.de / geo.sv.rostock.de | **CC0 1.0** |
 
-Sieben der acht stehen unter der **Datenlizenz Deutschland – Namensnennung – 2.0** (identisch zu Destatis/Eurostat, siehe oben): Vervielfältigung, Verbreitung, Veröffentlichung und kommerzielle Nutzung sind mit Quellenvermerk ausdrücklich erlaubt. Dortmund und Köln stehen sogar unter der noch offeneren **Datenlizenz Deutschland – Zero – 2.0** (public-domain-äquivalent, nicht einmal Namensnennung ist Pflicht, wird im Dashboard aber trotzdem angezeigt). Keine der acht Quellen hat ein Hystreet-artiges Verbot automatisierter Abfrage; alle sind als offene Maschinen-Downloads (CSV/GeoJSON/API) konzipiert. Quellenvermerk je Region ist im Dashboard bei jeder Kennzahl/jedem Kartenmarker verlinkt.
+Sieben der neun stehen unter der **Datenlizenz Deutschland – Namensnennung – 2.0** (identisch zu Destatis/Eurostat, siehe oben): Vervielfältigung, Verbreitung, Veröffentlichung und kommerzielle Nutzung sind mit Quellenvermerk ausdrücklich erlaubt. Dortmund und Köln stehen unter der noch offeneren **Datenlizenz Deutschland – Zero – 2.0**, Rostock sogar unter **Creative Commons CC0 1.0** (beides public-domain-äquivalent, nicht einmal Namensnennung ist Pflicht, wird im Dashboard aber trotzdem angezeigt). Keine der neun Quellen hat ein Hystreet-artiges Verbot automatisierter Abfrage; alle sind als offene Maschinen-Downloads (CSV/GeoJSON/API) konzipiert. Quellenvermerk je Region ist im Dashboard bei jeder Kennzahl/jedem Kartenmarker verlinkt.
+
+**Norddeutschland/Küsten-Recherche 2026-07 (Nutzeranfrage: „Norddeutschland scheint unterrepräsentiert, die Küste ist interessant").** Geprüft wurden Schleswig-Holstein, Niedersachsen, Mecklenburg-Vorpommern, Bremen sowie die Städte Kiel, Lübeck, Rostock, Flensburg, Wilhelmshaven, Cuxhaven und Sylt/Nordfriesland. Ergebnis:
+
+- **Rostock**: neu aufgenommen. 11 Zählstellen, CC0-1.0, darunter explizit Ostseeküsten-/Badeort-Standorte (Warnemünde Wetterwarte, Markgrafenheide, Graal-Müritz). Technischer Sonderfall: Die Datenquelle ist eine einzelne, seit 11/2013 fortlaufend wachsende CSV-Datei (Stand 07/2026: 154 MB, 15-Minuten-Werte). Ein täglicher Komplett-Download wäre unpraktikabel; `_fetch_rostock()` lädt daher nur die letzten ~30 MB der Datei per HTTP-Range-Request (`ROSTOCK_TAIL_BYTES`), mit einem clientseitigen Sicherheitsnetz falls ein Proxy/Server den Range-Header ignoriert und trotzdem die komplette Datei liefert.
+- **Bremen**: geprüft (12 Zählstellen seit 2012, sichtbar über die VMZ-Webseite), aber **keine offizielle Open-Data-Lizenz gefunden** — nur ein Blogbeitrag, der die Daten ohne Beschreibung des Zugriffswegs von der VMZ-Webseite bezogen hat. Ohne erkennbare Lizenz analog zu Bochum nicht aufgenommen.
+- **Kiel, Lübeck, Flensburg, Sylt/Nordfriesland, Wilhelmshaven, Cuxhaven**: keine eigenen offen lizenzierten Radverkehrs-Messwert-Datensätze gefunden (Kiel bleibt weiterhin nur über die in Abschnitt 5 unten beschriebene Mobilithek-Organisationsregistrierung erreichbar).
 
 **NRW-Vollrecherche 2026-07 (Nutzeranfrage: „Werden diese ganzen Frequenzen auch schon gezählt? Open NRW hat sehr viele Frequenzzähler").** Da Open.NRW/govdata.de deutlich mehr NRW-Radverkehrszähler listet als nur Münster, wurden systematisch geprüft: Bochum, Dortmund, Düsseldorf, Köln, Wuppertal, Kreis Viersen, Rhein-Kreis-Neuss und das GEOportal.NRW. Ergebnis:
 
