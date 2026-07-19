@@ -96,7 +96,7 @@
    ]
   },
   "monthly": {
-   "generated": "2026-07-18T16:39:35+00:00",
+   "generated": "2026-07-19T06:03:25+00:00",
    "items": [
     {
      "change_pct": 0.0,
@@ -287,9 +287,9 @@
   "daily": [],
   "monthly": [
    {
-    "message": "Secrets GENESIS_USER/GENESIS_PASS nicht gesetzt - uebersprungen",
+    "message": "Unerwartetes ffcsv-Format, Spalten: ['<!doctype html>']",
     "source": "genesis",
-    "time": "2026-07-18T16:39:35+00:00"
+    "time": "2026-07-19T06:03:25+00:00"
    }
   ],
   "quarterly": [
@@ -354,7 +354,7 @@
   "updated": {
    "daily": "2026-07-19T05:59:03+00:00",
    "hystreet_manual": "2026-07-18T18:27:39+00:00",
-   "monthly": "2026-07-18T16:39:35+00:00",
+   "monthly": "2026-07-19T06:03:25+00:00",
    "quarterly": "2026-07-18T20:25:22+00:00",
    "weekly": "2026-07-19T06:00:44+00:00"
   }
