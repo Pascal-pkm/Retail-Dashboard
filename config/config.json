@@ -81,6 +81,41 @@
         "locations_url": "https://opendata.stadt-muenster.de/sites/default/files/fahrradzaehl-standorte_0.geojson",
         "site_index_url": "https://raw.githubusercontent.com/od-ms/radverkehr-zaehlstellen/main/site_min.json",
         "csv_base": "https://raw.githubusercontent.com/od-ms/radverkehr-zaehlstellen/main"
+      },
+      "nrw_dortmund": {
+        "name": "Dortmund (Open Data Dortmund, Schnettkerbrücke)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "open-data.dortmund.de",
+        "source_url": "https://www.govdata.de/web/guest/suche/-/details/dauerzahlstelle-radverkehr-schnettkerbrucke",
+        "license": "dl-de/zero-2.0",
+        "records_url": "https://open-data.dortmund.de/api/v2/catalog/datasets/fb61-dauerzaehlstelle-radverkehr-schnettkerbruecke/records",
+        "lat": 51.4976,
+        "lon": 7.4354,
+        "backfill_days": 1600,
+        "_hinweis": "Nur EINE Zaehlstelle (Bochum, ebenfalls Eco-Counter-Hardware, ist explizit geschlossen lizenziert und bleibt ausgeschlossen)."
+      },
+      "nrw_duesseldorf": {
+        "name": "Düsseldorf (Open Data Düsseldorf, Wetterabhängige Jahresübersicht)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "opendata.duesseldorf.de",
+        "source_url": "https://www.govdata.de/web/guest/suche/-/details/wetterabhangige-jahresubersicht-der-dauerzahlstellen-radverkehr-2025",
+        "license": "dl-de/by-2.0",
+        "package_show_url": "https://www.govdata.de/ckan/api/3/action/package_show",
+        "package_id_prefix": "wetterabhangige-jahresubersicht-der-dauerzahlstellen-radverkehr-",
+        "locations_url": "https://opendata.duesseldorf.de/sites/default/files/Z%C3%A4hlstellen_1.geojson",
+        "_hinweis": "Jahresarchiv, erscheint erst ca. 6 Monate nach Jahresende - wir laden aktuelles + Vorjahr. ~23 Zaehlstellen, stuendliche Werte inkl. Wetter."
+      },
+      "nrw_koeln": {
+        "name": "Köln (Offene Daten Köln, Fahrrad Verkehrsdaten)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "offenedaten-koeln.de",
+        "source_url": "https://www.govdata.de/web/guest/suche/-/details/fahrrad-verkehrsdaten-koln-2022",
+        "license": "dl-de/zero-2.0",
+        "package_show_url": "https://www.govdata.de/ckan/api/3/action/package_show",
+        "package_id_prefix": "fahrrad-verkehrsdaten-koln-",
+        "first_year": 2010,
+        "station_max_points": 200,
+        "_hinweis": "Monatssummen pro Zaehlstelle (~17 Stationen). Datenstand seit 2022 nicht mehr aktualisiert (Stand 07/2026) - dennoch offen (DL-DE-Zero) lizenziert, daher aufgenommen."
       }
     }
   },

@@ -6,15 +6,25 @@ WICHTIG: Das sind Fahrrad-, KEINE Fussgaenger-Zaehlungen. Nutzerentscheidung
 akzeptiert, nachdem hystreet (Standort-Fussgaengerdaten) pausiert wurde und
 Destatis' eigene Passantenfrequenz-Erhebung zum 31.12.2025 eingestellt wurde.
 
-Deckt 5 einzeln verifizierte, frei zugaengliche Regionen ab (config.json ->
+Deckt 8 einzeln verifizierte, frei zugaengliche Regionen ab (config.json ->
 radverkehr.regions). Jede Region hat eine eigene _fetch_<region>()-Funktion,
 weil Format/API pro Bundesland/Stadt komplett unterschiedlich sind. Weitere
 Regionen lassen sich spaeter ergaenzen, ohne die bestehenden anzufassen.
 
+NRW-Vollrecherche 2026-07 (siehe COMPLIANCE.md): von allen gepruefeten NRW-
+Portalen sind nrw_muenster (bereits vorhanden), nrw_dortmund, nrw_duesseldorf
+und nrw_koeln offen lizenziert und liefern tatsaechliche Messwerte (nicht nur
+Standort-Metadaten). Bochum ist explizit "andere/geschlossene Lizenz" (Eco-
+Counter-Klausel, keine Weiterverbreitung) und bleibt ausgeschlossen. Wuppertal,
+Kreis Viersen, Rhein-Kreis-Neuss und GEOportal.NRW haben keine eigenen offen
+lizenzierten Messwert-Datensaetze (nur Infrastruktur-/Planungsdaten bzw.
+Standort-Metadaten ohne Zaehlwerte) und wurden daher nicht aufgenommen.
+
 Zwei Arten von Output in data.json:
-  1. data["series"]["radverkehr_region_<region>"] - EINE Tagessumme-Serie pro
-     Region (scope="region", frequency="daily"/"weekly"), landet im normalen
-     Frequenz-Grid + in der automatischen Kommentierung wie jede andere Serie.
+  1. data["series"]["radverkehr_region_<region>"] - EINE Summen-Serie pro
+     Region (scope="region", frequency="daily"/"weekly"/"monthly" je nach
+     Quellgranularitaet), landet im normalen Frequenz-Grid + in der
+     automatischen Kommentierung wie jede andere Serie.
   2. data["radverkehr_stations"][...] - Einzelstandorte mit lat/lon fuer die
      Kartenansicht (Task 11). Wird NICHT im normalen Card-Grid gerendert
      (sonst wuerden 150+ Karten die Seite sprengen); History pro Standort ist
@@ -25,7 +35,7 @@ import csv
 import io
 import math
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from common import add_point, http_get, upsert_series
 
@@ -35,6 +45,12 @@ REQUEST_TIMEOUT = 30
 REQUEST_RETRIES = 3
 
 MUC_REFERER = {"Referer": "https://opendata.muenchen.de/", "Accept": "application/json"}
+
+_UMLAUT_MAP = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+
+
+def _slugify(name):
+    return re.sub(r"[^a-z0-9]+", "_", (name or "").lower().translate(_UMLAUT_MAP)).strip("_")
 
 
 # ---------------------------------------------------------------- Helfer ---
@@ -111,13 +127,21 @@ def _region_daily_sums(fresh_points_by_station):
     return sums
 
 
+_PERIOD_LABEL = {"daily": "Tagessumme", "weekly": "Wochensumme", "monthly": "Monatssumme"}
+_PERIOD_UNIT = {
+    "daily": "Fahrräder/Tag (Summe)", "weekly": "Fahrräder/Woche (Summe)",
+    "monthly": "Fahrräder/Monat (Summe)",
+}
+
+
 def _push_region_series(data, region_key, region_cfg, sums, frequency="daily"):
     if not sums:
         return 0
     s = upsert_series(
         data, f"radverkehr_region_{region_key}",
-        label=f"Radverkehr-Index {region_cfg['name']} (Tagessumme aller Zählstellen)",
-        frequency=frequency, unit="Fahrräder/Tag (Summe)", scope="region",
+        label=f"Radverkehr-Index {region_cfg['name']} "
+              f"({_PERIOD_LABEL.get(frequency, 'Summe')} aller Zählstellen)",
+        frequency=frequency, unit=_PERIOD_UNIT.get(frequency, "Fahrräder (Summe)"), scope="region",
         source=region_cfg["source"], source_url=region_cfg.get("source_url", ""),
     )
     for d, v in sums.items():
@@ -385,6 +409,246 @@ def _fetch_nrw_muenster(data, stations, region_cfg, errors):
     return fresh
 
 
+# ------------------------------------------------------------ Dortmund ----
+
+def _fetch_dortmund(data, stations, region_cfg, errors):
+    """OpenDataSoft-API von open-data.dortmund.de (Zaehlstelle Schnettkerbruecke,
+    DL-DE-Zero-2.0). Serverseitige Tagessumme per group_by=datum statt der
+    15-Minuten-Rohdaten - ein einziger HTTP-Call liefert die komplette
+    Historie seit 2018, kein eigenes Aufsummieren noetig."""
+    params = {
+        "select": "datum,sum(radfahrer) as total",
+        "group_by": "datum",
+        "order_by": "datum desc",
+        "limit": region_cfg.get("backfill_days", 1600),
+    }
+    j = http_get(region_cfg["records_url"], params=params, timeout=REQUEST_TIMEOUT, retries=REQUEST_RETRIES).json()
+    key = "dortmund_schnettkerbruecke"
+    st = _station(
+        stations, key, name="Dortmund – Schnettkerbrücke",
+        lat=region_cfg.get("lat"), lon=region_cfg.get("lon"),
+        bundesland=region_cfg["bundesland"], region="nrw_dortmund",
+        source=region_cfg["source"], source_url=region_cfg.get("source_url", ""),
+    )
+    fresh = []
+    for rec in j.get("records", []):
+        f = rec.get("record", {}).get("fields", {})
+        ms, total = f.get("datum"), f.get("total")
+        if ms is None or total is None:
+            continue
+        d_iso = datetime.fromtimestamp(ms / 1000, tz=timezone.utc).date().isoformat()
+        val = float(total)
+        _add_station_point(st, d_iso, val)
+        fresh.append((d_iso, val))
+    return {key: fresh}
+
+
+# --------------------------------------------------------- Düsseldorf -----
+
+def _duess_station_locations(region_cfg, errors):
+    """WGS84-GeoJSON der Standorte; 'standort'-Namen darin sind ASCII-
+    transliteriert (kleingeschrieben, ae/oe/ue/ss) und werden per
+    Praefixvergleich (nach Normalisierung) auf die CSV-Stationsnamen gemappt."""
+    locs = []
+    try:
+        geo = http_get(region_cfg["locations_url"], timeout=REQUEST_TIMEOUT, retries=REQUEST_RETRIES).json()
+        for feat in geo.get("features", []):
+            props = feat.get("properties", {})
+            coords = (feat.get("geometry") or {}).get("coordinates", [None, None])
+            norm = _slugify(props.get("standort", "")).replace("_", " ")
+            if norm:
+                locs.append((norm, coords[1], coords[0]))
+    except Exception as e:  # noqa: BLE001
+        errors.append((SOURCE_MODULE, f"duesseldorf: Standorte - {e}"))
+    return locs
+
+
+def _duess_match_location(locs, station_name):
+    norm = _slugify(station_name).replace("_", " ")
+    best = None
+    for loc_norm, lat, lon in locs:
+        if norm.startswith(loc_norm) or loc_norm.startswith(norm):
+            if best is None or len(loc_norm) > len(best[0]):
+                best = (loc_norm, lat, lon)
+    return (best[1], best[2]) if best else (None, None)
+
+
+def _duess_year_resources(region_cfg, year, errors):
+    """CSV-Ressourcen eines Jahrgangs ueber die govdata.de-CKAN-API (deren
+    DCAT-Harvester spiegelt opendata.duesseldorf.de inkl. Ressourcen-URLs;
+    das Duesseldorfer Portal selbst hat keine oeffentlich erreichbare
+    package_show-API)."""
+    package_id = f"{region_cfg['package_id_prefix']}{year}"
+    try:
+        r = http_get(
+            region_cfg["package_show_url"], params={"id": package_id},
+            timeout=REQUEST_TIMEOUT, retries=1,
+        )
+        pkg = r.json()["result"]
+    except Exception:  # noqa: BLE001
+        return []  # Jahrgang (noch) nicht veroeffentlicht
+    out = []
+    for res in pkg.get("resources", []):
+        url = res.get("url", "")
+        if not url.lower().endswith(".csv"):
+            continue
+        name = res.get("name", "")
+        station_name = re.split(r"\s*-\s*Wetterabh", name)[0].strip() or name
+        # Manche Ressourcennamen tragen das Jahr zusaetzlich VOR dem Bindestrich
+        # (z.B. "... IN OUT 2025 - Wetterabhaengige Jahresuebersicht ... 2025"),
+        # was doppelte Stationsschluessel je Jahrgang erzeugen wuerde.
+        station_name = re.sub(r"\s+\d{4}$", "", station_name).strip()
+        out.append((station_name, url))
+    return out
+
+
+def _fetch_duesseldorf(data, stations, region_cfg, errors):
+    """Wetterabhaengige Jahresuebersicht Dauerzaehlstellen Radverkehr
+    (opendata.duesseldorf.de, DL-DE-BY-2.0). Jahresarchive erscheinen erst
+    Monate nach Jahresende, daher aktuelles + Vorjahr abfragen; stuendliche
+    Werte (Zeit;<Station[ IN;<Station> OUT];Symbol Wetter;Temperatur;Regen)
+    werden pro Tag aufsummiert."""
+    locs = _duess_station_locations(region_cfg, errors)
+    today = date.today()
+    years = sorted({today.year, today.year - 1})
+    fresh = {}
+    for year in years:
+        for station_name, url in _duess_year_resources(region_cfg, year, errors):
+            try:
+                r = http_get(url, timeout=REQUEST_TIMEOUT, retries=1)
+                rows = list(csv.reader(io.StringIO(r.content.decode("utf-8-sig")), delimiter=";"))
+            except Exception as e:  # noqa: BLE001
+                errors.append((SOURCE_MODULE, f"duesseldorf {year} {station_name}: {e}"))
+                continue
+            if len(rows) < 2:
+                continue
+            header = rows[0]
+            weather_idx = next((i for i, c in enumerate(header) if "wetter" in c.lower()), len(header))
+            count_cols = list(range(1, weather_idx))
+            if not count_cols:
+                continue
+
+            key = f"duesseldorf_{_slugify(station_name)}"
+            lat, lon = _duess_match_location(locs, station_name)
+            st = _station(
+                stations, key, name=f"Düsseldorf – {station_name}",
+                lat=lat, lon=lon,
+                bundesland=region_cfg["bundesland"], region="nrw_duesseldorf",
+                source=region_cfg["source"], source_url=region_cfg.get("source_url", ""),
+            )
+
+            daily_totals = {}
+            for row in rows[1:]:
+                if not row or not row[0].strip():
+                    continue
+                try:
+                    dt = datetime.strptime(row[0].strip(), "%d-%m-%Y %H:%M:%S")
+                except ValueError:
+                    continue
+                total, has_val = 0.0, False
+                for ci in count_cols:
+                    if ci >= len(row) or not row[ci].strip():
+                        continue
+                    try:
+                        total += float(row[ci].strip())
+                        has_val = True
+                    except ValueError:
+                        continue
+                if has_val:
+                    d_iso = dt.date().isoformat()
+                    daily_totals[d_iso] = daily_totals.get(d_iso, 0.0) + total
+            for d_iso, val in daily_totals.items():
+                _add_station_point(st, d_iso, val)
+            fresh.setdefault(key, []).extend(daily_totals.items())
+    return fresh
+
+
+# -------------------------------------------------------------- Köln ------
+
+_KOELN_MONTHS = {
+    "januar": 1, "februar": 2, "märz": 3, "april": 4, "mai": 5, "juni": 6,
+    "juli": 7, "august": 8, "september": 9, "oktober": 10, "november": 11, "dezember": 12,
+}
+
+
+def _koeln_year_csv_url(region_cfg, year, errors):
+    """Ressourcen-URL ueber govdata.de-CKAN-API; Dateiname/-schema wechselt
+    zwischen Jahrgaengen (mal 'Radverkehr fuer Offene Daten Koeln <Jahr>.csv',
+    mal 'Fahrrad_Zaehlstellen_Koeln_<Jahr>.csv'), deshalb keine URL-Vorlage."""
+    try:
+        r = http_get(
+            region_cfg["package_show_url"], params={"id": f"{region_cfg['package_id_prefix']}{year}"},
+            timeout=REQUEST_TIMEOUT, retries=1,
+        )
+        pkg = r.json()["result"]
+    except Exception:  # noqa: BLE001
+        return None  # Jahrgang nicht vorhanden (Datenstand seit 2022 nicht aktualisiert)
+    for res in pkg.get("resources", []):
+        url = res.get("url", "")
+        if url.lower().endswith(".csv"):
+            # WICHTIG: NICHT dekodieren. Die govdata.de-Ressourcen-URL enthaelt
+            # "%2520" etc. (aussieht wie doppelt-urlencodiert), aber die Datei
+            # auf offenedaten-koeln.de liegt tatsaechlich unter einem Dateinamen
+            # mit woertlichen "%xx"-Zeichen (Drupal-Upload-Artefakt) - verifiziert
+            # per Vergleichstest 2026-07: die rohe URL liefert HTTP 200, eine
+            # einfach dekodierte Variante (echte Leerzeichen/Umlaute) HTTP 404.
+            return url
+    return None
+
+
+def _fetch_koeln(data, stations, region_cfg, errors):
+    """Fahrrad Verkehrsdaten Koeln (offenedaten-koeln.de, DL-DE-Zero-2.0):
+    ein CSV pro Jahr mit Monatssummen je Zaehlstelle, Semikolon-getrennt,
+    deutsches Tausenderpunkt-Zahlenformat. Kodierung wechselt zwischen
+    Jahrgaengen (mal UTF-8, mal ISO-8859-1/CP1252) - erst UTF-8 versuchen,
+    sonst faellt "ü" sonst als Mojibake ("Ã¼") an und erzeugt doppelte
+    Stationsschluessel je nach Jahr."""
+    fresh = {}
+    current_year = date.today().year
+    for year in range(region_cfg.get("first_year", 2010), current_year + 1):
+        url = _koeln_year_csv_url(region_cfg, year, errors)
+        if not url:
+            continue
+        try:
+            raw = http_get(url, timeout=REQUEST_TIMEOUT, retries=1).content
+            try:
+                text = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                text = raw.decode("iso-8859-1")
+            rows = list(csv.reader(io.StringIO(text), delimiter=";"))
+        except Exception as e:  # noqa: BLE001
+            errors.append((SOURCE_MODULE, f"koeln {year}: {e}"))
+            continue
+        if len(rows) < 2:
+            continue
+        header = rows[0]
+        for row in rows[1:]:
+            if not row or not row[0].strip():
+                continue
+            month = _KOELN_MONTHS.get(row[0].strip().lower())
+            if not month:
+                continue
+            d_iso = date(year, month, 1).isoformat()
+            for ci in range(1, len(header)):
+                name = header[ci].strip()
+                if not name or ci >= len(row) or not row[ci].strip():
+                    continue
+                try:
+                    val = float(row[ci].strip().replace(".", "").replace(",", "."))
+                except ValueError:
+                    continue
+                key = f"koeln_{_slugify(name)}"
+                st = _station(
+                    stations, key, name=f"Köln – {name}", lat=None, lon=None,
+                    bundesland=region_cfg["bundesland"], region="nrw_koeln",
+                    source=region_cfg["source"], source_url=region_cfg.get("source_url", ""),
+                    unit="Fahrräder/Monat",
+                )
+                _add_station_point(st, d_iso, val, max_points=region_cfg.get("station_max_points", 200))
+                fresh.setdefault(key, []).append((d_iso, val))
+    return fresh
+
+
 # --------------------------------------------------------------- Main -----
 
 REGION_FETCHERS = {
@@ -392,6 +656,8 @@ REGION_FETCHERS = {
     "leipzig": _fetch_leipzig,
     "muenchen": _fetch_muenchen,
     "nrw_muenster": _fetch_nrw_muenster,
+    "nrw_dortmund": _fetch_dortmund,
+    "nrw_duesseldorf": _fetch_duesseldorf,
 }
 
 
@@ -412,6 +678,11 @@ def fetch(data, config, errors):
                 n_d = _push_region_series(data, region_key, region_cfg, _region_daily_sums(fresh_daily), "daily")
                 n_w = _push_region_series(data, region_key, region_cfg, _region_daily_sums(fresh_weekly), "weekly")
                 print(f"radverkehr[{region_key}]: {n_d} Tageswerte, {n_w} Wochenwerte", flush=True)
+            elif region_key == "nrw_koeln":
+                fresh = _fetch_koeln(data, stations, region_cfg, errors)
+                n = _push_region_series(data, region_key, region_cfg, _region_daily_sums(fresh), "monthly")
+                print(f"radverkehr[{region_key}]: {len(fresh)} Zählstellen, {n} Monats-Summenpunkte "
+                      f"(Jahresarchiv, seit 2022 nicht aktualisiert)", flush=True)
             else:
                 fetcher = REGION_FETCHERS.get(region_key)
                 if not fetcher:
