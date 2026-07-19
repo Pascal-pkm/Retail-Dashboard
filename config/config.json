@@ -192,6 +192,28 @@
         "lat": 48.3671, "lon": 10.8950,
         "_hinweis": "Laserzaehlung, stuendlich seit Dezember 2020, ein Standort (Annastraße).",
         "_risiko": "KEINE explizite Standard-Open-Data-Lizenz im CSV/Metadatensatz gefunden, nur oeffentliche Bereitstellung auf staedtischer Website. Nutzerentscheidung 2026-07: trotzdem einbauen, Risiko hier dokumentiert. Siehe COMPLIANCE.md Abschnitt 6."
+      },
+      "moers": {
+        "name": "Moers (Steinstraße, 4-fach-Laser)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "offenesdatenportal.de (Stadt Moers)",
+        "source_url": "https://www.offenesdatenportal.de/dataset/91dfafba-3fe1-471c-9d84-d3a7f9ea00cf",
+        "license": "dl-de/zero-2.0",
+        "ckan_base": "https://www.offenesdatenportal.de/api/3/action/package_show",
+        "package_id_template": "fubgangerinnen-und-fubganger-auf-der-steinstrabe-in-moers-im-jahr-{year}",
+        "lat": 51.4512579, "lon": 6.6270537,
+        "_hinweis": "Bundesweite Nachrecherche 2026-07-19 (Nutzerwunsch 'noch mehr Frequenzdaten'). Eigener 4-fach-Laser (MoersMarketing/ENNI) seit Mai 2022, misst rund um die Uhr, unterscheidet Erwachsene/Kinder. CKAN-Paket pro Jahr, mit taeglichen und stuendlichen Monatsdateien - hier werden die Tagesdateien ('nach Tagen') geladen. Lizenz DL-DE-Zero-2.0 zweifelsfrei bestaetigt via CKAN-Metadaten (unkritischste Lizenzstufe, wie Dortmund/Koeln)."
+      },
+      "berlin": {
+        "name": "Berlin (Telraam-Buergerwissenschaft 'Berlin zaehlt Mobilitaet')",
+        "bundesland": "Berlin",
+        "source": "berlin-zaehlt.de (ADFC Berlin / DLR)",
+        "source_url": "https://berlin-zaehlt.de/csv/",
+        "license": "CC BY 4.0",
+        "segments_url": "https://berlin-zaehlt.de/csv/bzm_telraam_segments.geojson",
+        "csv_url_template": "https://berlin-zaehlt.de/csv/bzm_telraam_{year}_{month:02d}.csv.gz",
+        "min_lookback_months": 2,
+        "_hinweis": "Bundesweite Nachrecherche 2026-07-19. Buergerwissenschaftliches Projekt von ADFC Berlin + DLR (Telraam-Sensoren, kostenlos ausleihbar). Enthaelt ECHTE Fussgaengerzahlen (Spalte ped_total) fuer Berlin - bisher komplett unabgedeckt, da die 'Open Data'-Eintraege von Berlin/Bonn/Muenster nur auf hystreet.com verweisen (siehe COMPLIANCE.md Abschnitt 6.2) und dort ausdruecklich nicht aufgenommen wurden. Dieses Projekt ist unabhaengig von Hystreet. Lizenz CC-BY-4.0 zweifelsfrei bestaetigt (LICENSE-Datei auf berlin-zaehlt.de). Nur Segmente mit tatsaechlich gemessenen Fussgaengerwerten (>0) werden als Stationen aufgenommen, um die Karte nicht mit reinen Rad-/Kfz-Zaehlstellen ohne Fussgaengersensor zu ueberladen."
       }
     }
   },

@@ -83,7 +83,7 @@ Sieben der neun stehen unter der **Datenlizenz Deutschland – Namensnennung –
 
 **Bewusst ausgeklammert: Kiel/Schleswig-Holstein.** Der Datensatz „Zählwerte Radverkehrszähler (Radzählstationen) Kiel" (Anbieter: KielRegion GmbH, Lizenz frei/Open Data, 6 Standorte, tägliche Werte) existiert in der Mobilithek (bundesweiter Mobilitätsdaten-Marktplatz) und ist inhaltlich lizenzrechtlich unkritisch. Der Zugriff erfordert aber mehr als einen persönlichen Account: Man muss als „Bestellmanager" eine **Organisation** bei der Mobilithek registrieren (Formular mit Organisationsname/-typ, Adresse, vertretungsberechtigter Person), bevor überhaupt ein „Abonnieren"-Button für das Angebot erscheint (Stand: 18.07.2026, mit registriertem Nutzeraccount geprüft, ID `995322152055894016`). Auf Nutzerentscheidung daher vorerst weiterhin nicht eingebunden. Falls die Organisation später registriert und das Abonnement freigeschaltet wird, kann Kiel als weitere Region ergänzt werden (`scripts/sources/radverkehr.py` ist dafür bewusst pro Region erweiterbar aufgebaut) – dazu wird vermutlich ein API-Key/Endpoint aus dem Mobilithek-Abonnement benötigt, der als GitHub-Secret hinterlegt würde.
 
-## 6. Passantenfrequenzen — 6 Städte (`fussgaenger.py`) — ✅ 4× unkritisch, 2× dokumentiertes Restrisiko
+## 6. Passantenfrequenzen — 8 Regionen (`fussgaenger.py`) — ✅ 6× unkritisch, 2× dokumentiertes Restrisiko
 
 ### 6.1 Oldenburg — ✅ unkritisch, andere rechtliche Situation als Hystreet direkt
 
@@ -119,12 +119,34 @@ Bei beiden Städten wurde die Datenlage per AskUserQuestion vorgelegt (Vorteil: 
 - **Bonn, Münster, Berlin**: Ihre jeweiligen "Open Data"-Kataloge listen zwar Passantenfrequenz-Datensätze, diese verweisen jedoch nur auf eine **hystreet.com-Registrierung** — die zugrunde liegenden Rohdaten werden nicht von der Stadt selbst re-publiziert, sondern bleiben auf der registrierungspflichtigen Hystreet-Plattform, deren Free-Tier-AGB gewerbliche/automatisierte Nutzung explizit untersagt (Abschnitt 1). Ein "Open Data"-Karteneintrag allein macht die zugrunde liegende Plattform nicht offen lizenziert — entscheidend ist, ob die Stadt die **Daten selbst** unter einer offenen Lizenz bereitstellt (wie bei Oldenburg/Würzburg/Dortmund/Neuss) oder nur auf einen Drittanbieter-Dienst verweist (wie hier). Nicht aufgenommen.
 - **Braunschweig**: eigene, unabhängige Zählung vorhanden, aber die Messung wurde **Ende 2022 eingestellt** — keine aktuellen Daten mehr, daher trotz einwandfreier Lizenzlage nicht aufgenommen (keine Aktualität).
 
+### 6.4 Weitere bundesweite Nachrecherche 2026-07-19 (Nutzeranfrage: „Suche mir noch mehr Frequenzdaten aus Deutschland raus, so viele wie möglich")
+
+Fortsetzung von Abschnitt 6.2, diesmal über die CKAN-Suche von govdata.de/offenesdatenportal.de mit weiteren Suchbegriffen (Besucherfrequenz, Kundenfrequenz, Frequenzmessung, Fußgängerzähler, Passantenzählung) sowie gezielte Prüfung großer Städte (Hamburg, München, Frankfurt, Stuttgart, Hannover, Nürnberg, Karlsruhe, Mannheim, Freiburg, Leipzig, Dresden, Kassel) — keine davon veröffentlicht eigene Passantenzahlen offen lizenziert.
+
+**Neu aufgenommen — Lizenz zweifelsfrei bestätigt:**
+
+| Stadt | Quelle | Lizenz | Sensorik |
+|---|---|---|---|
+| Moers | offenesdatenportal.de (Stadt Moers) | **dl-de/zero-2.0** | eigener 4-fach-Laser Steinstraße (MoersMarketing/ENNI), seit 05/2022, misst rund um die Uhr, unterscheidet Erwachsene/Kinder |
+| Berlin | berlin-zaehlt.de (ADFC Berlin + DLR, Bürgerwissenschaftsprojekt „Berlin zählt Mobilität") | **CC BY 4.0** | Telraam-Sensoren (kostenlos ausleihbar), 135 Straßenabschnitte mit tatsächlich gemessenen Fußgängerwerten, stündlich |
+
+**Berlin ist ein Sonderfall gegenüber Abschnitt 6.2:** Dort wurde Berlins offizieller „Open Data"-Eintrag zur Passantenfrequenz ausgeschlossen, weil er nur auf eine hystreet.com-Registrierung verweist. „Berlin zählt Mobilität" ist ein davon komplett unabhängiges Projekt (ADFC Berlin + Deutsches Zentrum für Luft- und Raumfahrt, keine Hystreet-Beteiligung), das eigene Telraam-Sensoren an Bürger:innen verleiht und die Rohdaten auf einer eigenen Domain unter CC-BY-4.0 veröffentlicht (LICENSE-Datei live geprüft). Von den insgesamt 288 Telraam-Messpunkten in Berlin zählen nur ca. 135 tatsächlich Fußgänger (die übrigen erfassen nur Rad-/Kfz-Verkehr, da nicht jeder Telraam-Sensor für Fußgängerzählung kalibriert ist) — `fussgaenger.py` nimmt automatisch nur Segmente mit tatsächlich gemessenen Fußgängerwerten (Summe > 0) als Kartenpunkte auf, damit Berlin nicht mit bedeutungslosen Nullwert-Markern überladen wird. Zusätzlich stellt dasselbe Projekt historische Berliner Eco-Counter-Radverkehrsdaten unter dl-de/by-2.0 bereit (`LICENSE.ecocounter`) — diese sind (noch) nicht eingebunden, könnten aber bei Bedarf `radverkehr.py` als zehnte Region ergänzen.
+
+**Geprüft, aber NICHT aufgenommen (Restrisiko zu hoch bzw. technisch ungeeignet):**
+
+- **Bochum (Rad- und Fußverkehr, 9 Eco-Counter-Zählstellen, GitLab-Repo `StadtBochum/open-data`)**: Anders als beim 2026-07 bereits geprüften und wegen `other-closed`-Lizenz ausgeschlossenen Bochumer Eco-Counter-Datensatz (Abschnitt 5) taucht bei Open.NRW inzwischen ein zweiter, neuerer Bochumer Datensatz „Rad- und Fußverkehr" auf, der Rohdaten aus einem GitLab-Repository verlinkt. Weder im CKAN-Metadatensatz noch im Repository selbst ist eine Standard-Open-Data-Lizenz angegeben (nur ein allgemeiner Haftungsausschluss „ohne Gewähr") — nicht eingebunden, da unklar, ob dieselbe vertragliche Einschränkung wie beim bereits geprüften Bochum-Datensatz gilt. Bei Bedarf: Rückfrage bei opendata@bochum.de.
+- **Deggendorf (Personenfrequenzmessung Innenstadt, Mobilfunkdaten-basiert)**: Datensatz existiert in der Mobilithek, verweist aber nur auf eine persönliche SharePoint-Freigabe (`deggendorfde-my.sharepoint.com/...`) ohne stabilen Direktlink und ohne erkennbare Lizenz — technisch nicht als automatisierte, zuverlässige Quelle nutzbar (SharePoint-Freigabelinks können jederzeit ablaufen oder einen Login verlangen). Nicht eingebunden.
+- **Münster („Passantenfrequenzen Einzelhandelslagen Jahresdaten"/„Tagesaktuell")**: weiterhin nur Verweis auf hystreet.com-Registrierung (siehe Abschnitt 6.2) — unverändert ausgeschlossen.
+- **Ernst-Reuter-Platz Berlin („Flow"-Sensorik, DAI-Labor/TU Berlin)**: Datensatz und verlinkte Domain (`flow.dai-labor.de`) sind veraltet (letzte Daten Anfang 2018, Projekt offenbar eingestellt) — keine aktuellen Werte, nicht eingebunden.
+
 ### 6.3 Datenformat-Besonderheiten (technisch, für zukünftige Wartung)
 
 - **Dortmund**: Der CSV-Export enthält Zeilen aufgeschlüsselt nach Richtung × Passantentyp; die Spalte "Passantenaufkommen pro Standort" wiederholt sich dabei identisch je (Standort, Messzeitpunkt) — `fussgaenger.py` dedupliziert vor der Aggregation, sonst würde massiv überzählt.
 - **Bamberg**: CSV-Encoding ist **cp1252**, nicht UTF-8 (Umlaute wären sonst verstümmelt).
 - **Neuss**: Trotz des Feldnamens `hour_start` liegt die Daten tatsächlich nur auf Tagesebene vor (max. 1 Wert pro Standort und Tag).
 - **Augsburg**: Datumsspalte enthält einen Wochentags-Präfix ("Mi., 16.12.2020"), der vor dem Parsen abgetrennt werden muss; Daten enden Stand 07/2026 bereits um Oktober 2025 (keine durchgehend aktuelle Quelle).
+- **Moers**: Der CKAN-Paketname slugifiziert "ß" uneinheitlich zu "b" statt "ss" (`fubgangerinnen-...-steinstrabe-...`, live verifiziert 07/2026) - das Template in `config.json` nutzt bewusst diese Schreibweise, nicht die naheliegende "fussgangerinnen"-Variante. Paket wechselt jährlich den Namen (im-jahr-{year}), enthält pro Monat je eine Tages- und Stundendatei - nur die Tagesdatei wird geladen.
+- **Berlin (Telraam)**: `requests` entpackt die gzip-komprimierten Monatsdateien wegen des Response-Headers `Content-Encoding: gzip` bereits automatisch (der Rohinhalt ist dadurch trotz `.csv.gz`-Dateiendung schon reiner CSV-Text) - `fussgaenger.py` prüft daher zusätzlich per Gzip-Magic-Bytes, ob doch noch manuell entpackt werden muss, statt blind `gzip.decompress()` aufzurufen. Von 288 Telraam-Segmenten in Berlin zählen nur ca. 135 tatsächlich Fußgänger; reine Rad-/Kfz-Segmente werden anhand der Tagessumme (>0) automatisch herausgefiltert.
 
 ## 7. ifo Institut — direkte ifo-Zeitreihen (Geschäftsklima/-lage/-erwartungen) — ⚠️ Restrisiko akzeptiert
 
