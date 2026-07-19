@@ -51,8 +51,9 @@ def fetch(data, config, errors):
             raise RuntimeError(f"unplausibler Wert: {value}")
 
         when = _parse_version_date(inner.get("dataVersionDate", ""))
+        year = int(when[:4])
         if month_name in MONTHS:
-            when = date(int(when[:4]), MONTHS[month_name], 1).isoformat()
+            when = date(year, MONTHS[month_name], 1).isoformat()
 
         s = upsert_series(
             data, "ifo_geschaeftsklima",
@@ -61,6 +62,22 @@ def fetch(data, config, errors):
             source=SOURCE, source_url="https://www.ifo.de/umfragen/ifo-geschaeftsklimaindex",
         )
         add_point(s, when, value, "monthly")
+
+        # Die Pressemitteilungs-Passage nennt meist auch den Vormonatswert
+        # ("... sank im Maerz auf 86,4 Punkte, nach 88,4 Punkten im Februar ...").
+        # Den nehmen wir mit - sonst haengt die Serie fest, solange Destatis das
+        # Tile nicht mit einem neuen Monat aktualisiert (das Tile wird erfahrungsgemaess
+        # nur unregelmaessig gepflegt).
+        m2 = re.search(r"nach\s+(\d{2,3}[.,]\d)\s*Punkten?\s+im\s+(\w+)", text)
+        if m2 and month_name in MONTHS:
+            prev_month_name = m2.group(2).lower()
+            if prev_month_name in MONTHS:
+                prev_value = float(m2.group(1).replace(",", "."))
+                if 50 <= prev_value <= 130:
+                    prev_year = year - 1 if MONTHS[prev_month_name] > MONTHS[month_name] else year
+                    prev_when = date(prev_year, MONTHS[prev_month_name], 1).isoformat()
+                    add_point(s, prev_when, prev_value, "monthly")
+
         widgets.extend(tile_widgets(inner))
     except Exception as e:  # noqa: BLE001
         errors.append(("ifo", str(e)))

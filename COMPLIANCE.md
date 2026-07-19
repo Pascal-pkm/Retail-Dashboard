@@ -40,7 +40,7 @@ Eurostat-Daten dürfen laut Eurostat-Lizenzpolitik (CC BY 4.0-basiert) frei weit
 ## 4. Übrige Quellen — Hinweise
 
 - **Google Trends via pytrends:** inoffizielle Bibliothek, kein API-Vertrag; Werte sind relative Indizes. Ausfall-/Sperrrisiko einkalkuliert (Fehlerprotokoll statt Abbruch).
-- **Pinterest Trends:** kein offizielles API; Best-Effort-Scraper, ToS-Grauzone. Auf Wunsch aktiviert (`pinterest_trends.enabled`), kann jederzeit deaktiviert werden.
+- **Pinterest Trends:** kein offizielles API; Best-Effort-Scraper, ToS-Grauzone. **Seit 07/2026 deaktiviert** (`pinterest_trends.enabled=false`): Pinterest verlangt für die Keyword-Suche jetzt ein Login (per Browser verifiziert – die Suche leitet sofort auf ein Anmelden/Registrieren-Modal um, kein Such-Request feuert mehr unauthentifiziert). Der bisher genutzte interne Endpunkt liefert nur noch 404. Da wir bewusst keine Konten anlegen oder Logins automatisieren, bleibt die Quelle deaktiviert, bis es einen offiziellen, oeffentlichen Zugang gibt.
 - **Aktienkurse (Yahoo/Stooq):** nur zur Information, kein Weitervertrieb der Rohdaten.
 - **ifo:** Kennzahl aus öffentlicher Pressemitteilung mit Quellenangabe (Zitatrecht/Pressemitteilungscharakter); keine Vervielfältigung ganzer Publikationen.
 - **IR-Berichte:** öffentliche Pflichtveröffentlichungen; wir speichern Links + einzelne Kennzahlen mit Quellenangabe, keine PDF-/XLSX-Weiterverbreitung. Bei Zalando werden seit 07/2026 rein numerische Kennzahlen (keine Formatierung, Kommentare oder Layout) aus der öffentlich zum Download bereitgestellten „Financials XLS" strukturiert ausgelesen (statt einzelner Werte per PDF-Text-Regex) – die Rohdatei selbst wird nicht gespeichert oder veröffentlicht, nur die extrahierten Zahlen mit Link zur offiziellen Quelle.

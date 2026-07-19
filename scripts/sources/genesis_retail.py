@@ -33,7 +33,13 @@ def fetch(data, config, errors):
         "username": user, "password": pw, "name": table,
         "area": "all", "format": "ffcsv", "language": "de", "compress": "false",
     }, timeout=120)
-    text = r.text
+    # r.text verlaesst sich auf requests' Encoding-Erkennung, die ohne charset im
+    # Content-Type-Header oft danebenliegt (siehe muenchen-BOM-Bug in radverkehr.py).
+    # Ausserdem faengt die Antwort manchmal mit einer BOM oder leeren Fuehrungszeile(n)
+    # an, wodurch csv.DictReader die erste (leere) Zeile faelschlich als Header mit
+    # nur einer leeren Spalte "" einliest. Beides hier robust abfangen.
+    text = r.content.decode("utf-8-sig", errors="replace")
+    text = text.lstrip("﻿\r\n \t")
     if text.lstrip().startswith("{"):
         # Fehlerobjekt statt CSV
         raise RuntimeError(f"GENESIS-Antwort: {text[:300]}")
@@ -41,7 +47,7 @@ def fetch(data, config, errors):
     reader = csv.DictReader(io.StringIO(text), delimiter=";")
     rows = list(reader)
     if not rows:
-        raise RuntimeError("Leere ffcsv-Antwort")
+        raise RuntimeError(f"Leere ffcsv-Antwort (erste 200 Zeichen: {text[:200]!r})")
 
     cols = rows[0].keys()
     def col(*cands):
@@ -57,7 +63,10 @@ def fetch(data, config, errors):
     c_valcode = col("Wertkennziffer", "value_variable_code", "Merkmal_Code")
     c_val = col("Wert", "value")
     if not all([c_year, c_val]):
-        raise RuntimeError(f"Unerwartetes ffcsv-Format, Spalten: {list(cols)[:12]}")
+        raise RuntimeError(
+            f"Unerwartetes ffcsv-Format, Spalten: {list(cols)[:12]} "
+            f"(erste 200 Zeichen der Antwort: {text[:200]!r})"
+        )
 
     month_map = {f"MONAT{str(i).zfill(2)}": i for i in range(1, 13)}
 

@@ -33,6 +33,16 @@ QUARTER_COL_RE = re.compile(r"Q([1-4])\s*/\s*(\d{2})")
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
 _SUBROW_KEYWORDS = {"b2c", "b2b", "reconciliation"}
 
+# corporate.zalando.com blockt den generischen common.USER_AGENT (nicht-Browser-UA)
+# mit 403 Forbidden (WAF/Bot-Schutz) - mit einem browserartigen User-Agent klappt
+# derselbe Request problemlos (lokal verifiziert). Analog zum muenchen-CKAN-503-Fix
+# in radverkehr.py.
+_BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+}
+
 
 def _current_quarter_label():
     today = date.today()
@@ -174,7 +184,7 @@ def _parse_xlsx_sheet(ws):
 def _fetch_xlsx_company(data, key, comp, errors):
     name = comp.get("name", key)
     reports = data.setdefault("ir_reports", {})
-    html = http_get(comp["ir_url"]).text
+    html = http_get(comp["ir_url"], headers=_BROWSER_HEADERS).text
     xlsx_url = _find_link_by_title(html, comp["financials_xlsx_title"], comp["ir_url"])
     presentation_url = None
     if comp.get("presentation_title"):
@@ -192,7 +202,7 @@ def _fetch_xlsx_company(data, key, comp, errors):
         return
 
     import openpyxl
-    xlsx_bytes = http_get(xlsx_url, timeout=90).content
+    xlsx_bytes = http_get(xlsx_url, headers=_BROWSER_HEADERS, timeout=90).content
     wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
 
     n_kpis, n_points, latest_q, earliest_q = 0, 0, None, None

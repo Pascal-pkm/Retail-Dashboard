@@ -121,9 +121,21 @@ const REGION_LABEL = {bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipz
 const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
 const GT_PRESETS = [["7d","7 Tage"],["30d","30 Tage"],["90d","90 Tage"],["1y","1 Jahr"],["5y","5 Jahre"],["all","Alles"]];
 const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
+// Mindestspanne je Frequenz, damit ein Frequenzwechsel immer genug Buckets fuer
+// einen erkennbaren Trend zeigt (sonst bleibt z.B. eine vorher per Preset gesetzte
+// 30-Tage-Spanne beim Wechsel auf "Monatlich" bei nur 1-2 Punkten haengen).
+const GT_MIN_SPAN_DAYS = {daily: 90, weekly: 180, monthly: 545, quarterly: 1095};
 
 let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
 let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
+
+function gtEnsureMinSpan(freq){
+  // Weitet gtRangeFrom bei Bedarf so weit, dass die Mindestspanne fuer "freq"
+  // erreicht ist. Verengt eine bereits weitere Auswahl NICHT (nur vergroessern).
+  if(gtRangeFrom === null) return; // "Alles" ist bereits maximal weit
+  const wantFrom = addDaysISO(gtRangeTo || todayISO(), -GT_MIN_SPAN_DAYS[freq]);
+  if(wantFrom < gtRangeFrom) gtRangeFrom = wantFrom;
+}
 let cardZoom = {}; // sid -> {from, to} (Datumsstrings), fuer Klick-Zoom auf den Standard-Karten
 
 const fmt = (x,d=1) => x==null ? "–" : x.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -383,7 +395,7 @@ function renderGtFilterbar(){
     const b = document.createElement("button"); b.textContent = label; b.className = "subnav-btn" + (f===gtFreq?" active":"");
     b.style.cssText = "border:1px solid var(--card-border);background:transparent;color:var(--text);padding:5px 14px;border-radius:14px;cursor:pointer;font-size:12px";
     if(f===gtFreq){ b.style.background="var(--accent)"; b.style.color="var(--accent-dark)"; b.style.fontWeight="700"; }
-    b.onclick = () => { gtFreq = f; renderGtrends(); };
+    b.onclick = () => { gtFreq = f; gtEnsureMinSpan(f); renderGtrends(); };
     freqGrp.appendChild(b);
   }
   bar.appendChild(freqGrp);
@@ -418,10 +430,11 @@ function renderGtrends(){
   const all = gtSeriesList();
   if(gtChecked === null){ gtChecked = new Set(all.map(([sid])=>sid)); }
   if(!gtRangeInit){
-    // Default-Ansicht: letzte 90 Tage statt der kompletten (ggf. mehrjaehrigen) Historie -
-    // sonst ist beim ersten Laden sofort alles auf einmal geladen und einzelne Tages-/
-    // Wochenschwankungen sind visuell kaum zu erkennen. Ueber "Alles" jederzeit erweiterbar.
-    gtRangeFrom = addDaysISO(todayISO(), -90);
+    // Default-Ansicht: letzte GT_MIN_SPAN_DAYS[gtFreq] Tage statt der kompletten (ggf.
+    // mehrjaehrigen) Historie - sonst ist beim ersten Laden sofort alles auf einmal
+    // geladen und einzelne Tages-/Wochenschwankungen sind visuell kaum zu erkennen.
+    // Ueber "Alles" jederzeit erweiterbar.
+    gtRangeFrom = addDaysISO(todayISO(), -GT_MIN_SPAN_DAYS[gtFreq]);
     gtRangeInit = true;
   }
 

@@ -127,8 +127,8 @@
   },
 
   "pinterest_trends": {
-    "enabled": true,
-    "_hinweis": "Best-Effort: inoffizieller Endpunkt, kann jederzeit brechen.",
+    "enabled": false,
+    "_hinweis": "Deaktiviert seit 07/2026: Pinterest Trends verlangt inzwischen ein Login fuer die Keyword-Suche (per Chrome ueberprueft - Suche leitet sofort auf einen Anmelden/Registrieren-Modal um, kein API-Aufruf feuert mehr unauthentifiziert). Der frueher genutzte interne Endpunkt liefert nur noch 404. Ohne Login-Automatisierung (die wir bewusst nicht durchfuehren) ist diese Quelle nicht mehr nutzbar.",
     "region": "DE",
     "terms": ["summer outfit", "sneaker trends", "herbstmode"]
   },

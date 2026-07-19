@@ -20,7 +20,7 @@ Sammelt öffentliche Retail-/Mode-Branchen-KPIs in vier Frequenzen (täglich, w�
 | täglich | Aktienkurse (yfinance/Stooq) | Konzern | Zalando, adidas, Puma, Inditex, H&M (About You seit 2025 Teil von Zalando, Ticker delisted) |
 | täglich | Radverkehr-Dauerzählstellen (BW, Hamburg, Leipzig, München, Münster/NRW) | Region + Standort (Karte) | Näherungswert für Wegefrequenzen, **keine Fußgängerzahlen** – siehe COMPLIANCE.md Abschnitt 5 |
 | wöchentlich | Destatis Dashboard Deutschland (Tile-API) | Branche | dl-de/by-2-0 |
-| wöchentlich | Pinterest Trends | Branche | Best-Effort, experimentell |
+| wöchentlich | Pinterest Trends | Branche | **deaktiviert seit 07/2026** – Pinterest verlangt inzwischen ein Login für die Keyword-Suche, der inoffizielle Endpunkt liefert nur noch 404 |
 | monatlich | GENESIS 45212-0001 (inkl. Versand-/Internethandel) | Branche | Secrets nötig |
 | monatlich | Eurostat sts_trtu_m (G47, G47.71) | Branche | frei |
 | monatlich | ifo-Geschäftsklima + HDE/GfK-Konsum | Branche | absolute Werte via Destatis-Dashboard-Tiles (verifiziert) |
