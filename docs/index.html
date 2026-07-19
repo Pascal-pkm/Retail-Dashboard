@@ -134,7 +134,7 @@
 <footer id="footer"></footer>
 
 <script>
-const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
+const FREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartal"]];
 const SCOPE = {standort:"Standortebene", konzern:"Konzernebene", branche:"Branche/Gesamtmarkt", region:"Regional-Index (Radverkehr-Proxy)"};
 const REGION_COLOR = {
   bw:"#d7e94a", hamburg:"#f87171", leipzig:"#6ee7a0", muenchen:"#fb923c", nrw_muenster:"#c084fc",
@@ -144,8 +144,8 @@ const REGION_LABEL = {
   bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)",
   nrw_dortmund:"Dortmund (NRW)", nrw_duesseldorf:"Düsseldorf (NRW)", nrw_koeln:"Köln (NRW)", rostock:"Rostock (Ostseeküste)",
 };
-const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
-const RV_SUBFREQS = [["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartalsweise"]];
+const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartal"]];
+const RV_SUBFREQS = [["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartal"]];
 const RV_PERIOD_WORD = {weekly:"Vorjahreswoche", monthly:"Vorjahresmonat", quarterly:"Vorjahresquartal"};
 const GT_PRESETS = [["7d","7 Tage"],["30d","30 Tage"],["90d","90 Tage"],["1y","1 Jahr"],["5y","5 Jahre"],["all","Alles"]];
 const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
