@@ -1,7 +1,7 @@
 {
  "commentary": {
   "daily": {
-   "generated": "2026-07-19T06:25:37+00:00",
+   "generated": "2026-07-19T06:29:29+00:00",
    "items": [
     {
      "change_pct": -98.74,
@@ -284,7 +284,28 @@
   ]
  },
  "errors": {
-  "daily": [],
+  "daily": [
+   {
+    "message": "['Zalando', 'Zara', 'H&M', 'camel active', 'PME Legend']: The request failed: Google returned a response with code 400",
+    "source": "google_trends",
+    "time": "2026-07-19T06:29:29+00:00"
+   },
+   {
+    "message": "['Marco Polo', 'Strellson', 'Windsor', 'Gerry Weber', 's.Oliver']: The request failed: Google returned a response with code 400",
+    "source": "google_trends",
+    "time": "2026-07-19T06:29:29+00:00"
+   },
+   {
+    "message": "['Tom Tailor', 'Jacke', 'Hose', 'T-Shirt', 'Kleid']: The request failed: Google returned a response with code 400",
+    "source": "google_trends",
+    "time": "2026-07-19T06:29:29+00:00"
+   },
+   {
+    "message": "['Pullover', 'Mantel', 'Rock', 'Sneaker', 'Abendkleid']: The request failed: Google returned a response with code 400",
+    "source": "google_trends",
+    "time": "2026-07-19T06:29:29+00:00"
+   }
+  ],
   "monthly": [
    {
     "message": "Unerwartetes ffcsv-Format, Spalten: ['<!doctype html>']",
@@ -352,7 +373,7 @@
  "meta": {
   "project": "Retail KPI Dashboard",
   "updated": {
-   "daily": "2026-07-19T06:25:37+00:00",
+   "daily": "2026-07-19T06:29:29+00:00",
    "hystreet_manual": "2026-07-18T18:27:39+00:00",
    "monthly": "2026-07-19T06:03:25+00:00",
    "quarterly": "2026-07-19T06:06:40+00:00",
