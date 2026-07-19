@@ -1126,9 +1126,13 @@ function renderMoversSection(freq){
   box.innerHTML = "";
 
   const regionEntries = [...rvRegionSeriesList(), ...fgRegionSeriesList()].map(([sid,s])=>{
+    // Die Serien-Objekte (DATA.series["radverkehr_region_..."]) fuehren KEIN eigenes
+    // "region"-Feld (das gibt es nur bei den Zaehlstellen in radverkehr_stations/
+    // fussgaenger_stations) - der Regionsschluessel steckt nur in der sid selbst.
     const isFg = sid.startsWith("fussgaenger_region_");
-    const label = `${(isFg?FG_REGION_LABEL:REGION_LABEL)[s.region] || s.region} (${isFg?"Fußgänger":"Radverkehr"})`;
-    const color = (isFg?FG_REGION_COLOR:REGION_COLOR)[s.region] || "#9aa3ab";
+    const regionKey = sid.replace(isFg ? "fussgaenger_region_" : "radverkehr_region_", "");
+    const label = `${(isFg?FG_REGION_LABEL:REGION_LABEL)[regionKey] || regionKey} (${isFg?"Fußgänger":"Radverkehr"})`;
+    const color = (isFg?FG_REGION_COLOR:REGION_COLOR)[regionKey] || "#9aa3ab";
     const m = regionMoverChange(s.points, freq);
     return m ? {label, color, unit: isFg?(s.unit||"Fußgänger"):"Fahrräder", ...m} : null;
   }).filter(Boolean).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,3);
