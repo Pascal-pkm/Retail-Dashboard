@@ -131,7 +131,7 @@
    ]
   },
   "quarterly": {
-   "generated": "2026-07-18T20:25:22+00:00",
+   "generated": "2026-07-19T06:06:40+00:00",
    "items": [
     {
      "change_pct": -1216.67,
@@ -294,14 +294,14 @@
   ],
   "quarterly": [
    {
-    "message": "Inditex: kein PDF-Link (JS-Seite?) - nur IR-Link gespeichert",
+    "message": "Zalando SE (inkl. About You seit Übernahme 2025): 403 Client Error: Forbidden for url: https://corporate.zalando.com/en/investor-relations/financial-reporting",
     "source": "ir_reports",
-    "time": "2026-07-18T20:25:22+00:00"
+    "time": "2026-07-19T06:06:40+00:00"
    },
    {
     "message": "H&M Group: PDF gefunden, aber keine KPIs per Regex extrahiert (https://hmgroup.com/wp-content/uploads/2026/06/Q2-2026-report-PPT_final.pdf)",
     "source": "ir_reports",
-    "time": "2026-07-18T20:25:22+00:00"
+    "time": "2026-07-19T06:06:40+00:00"
    }
   ],
   "weekly": [
@@ -324,7 +324,7 @@
  },
  "ir_reports": {
   "hm": {
-   "checked": "2026-07-18T20:25:21+00:00",
+   "checked": "2026-07-19T06:06:39+00:00",
    "ir_url": "https://hmgroup.com/investors/reports/",
    "kpis": {},
    "name": "H&M Group",
@@ -333,11 +333,11 @@
    "scope": "konzern"
   },
   "inditex": {
-   "checked": "2026-07-18T20:25:21+00:00",
+   "checked": "2026-07-19T06:06:39+00:00",
    "ir_url": "https://www.inditex.com/itxcomweb/en/investors/investor-relations/quarterly-results",
    "name": "Inditex",
    "quarter": "2026-Q2",
-   "report_url": "https://www.inditex.com/itxcomweb/en/investors/investor-relations/quarterly-results",
+   "report_url": "https://www.inditex.com/itxcomweb/api/media/4ed7dde5-9b2a-4321-a680-64431861bf07/InditexGroupModernSlaveryActCanadaFmdo.pdf?t=1781105174544",
    "scope": "konzern"
   },
   "zalando": {
@@ -355,7 +355,7 @@
    "daily": "2026-07-19T05:59:03+00:00",
    "hystreet_manual": "2026-07-18T18:27:39+00:00",
    "monthly": "2026-07-19T06:03:25+00:00",
-   "quarterly": "2026-07-18T20:25:22+00:00",
+   "quarterly": "2026-07-19T06:06:40+00:00",
    "weekly": "2026-07-19T06:00:44+00:00"
   }
  },
