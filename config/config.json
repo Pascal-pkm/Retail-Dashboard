@@ -131,14 +131,68 @@
   },
 
   "fussgaenger": {
-    "_hinweis": "Echte Passantenfrequenzen (Fussgaenger, nicht Fahrrad) - siehe scripts/sources/fussgaenger.py fuer die rechtliche Einordnung ggue. Hystreet (Abschnitt oben). Aktuell nur Oldenburg; weitere Staedte koennten spaeter ergaenzt werden, falls sie ihre Hystreet- oder aehnliche Sensordaten ebenfalls selbst offen re-publizieren.",
-    "oldenburg": {
-      "name": "Oldenburg (Innenstadt, ehemalige Hystreet-Sensoren)",
-      "source": "opendata.oldenburg.de",
-      "source_url": "https://www.govdata.de/web/guest/suche/-/details/passantenfrequenzen",
-      "license": "dl-de/by-2.0",
-      "csv_url_template": "https://opendata.oldenburg.de/sites/default/files/E1408_passantenfrequenz-oldenburg-{year}-taeglich.csv",
-      "_hinweis": "Jahresarchiv (DCAT frequency=ANNUAL) - aktuelles + Vorjahr werden bei jedem Lauf neu geladen. 4 Zaehlstellen (Achternstraße, Haarenstraße, Haarenstraße Ost, Lange Straße), taeglich seit 2020. Rechtliche Einordnung ggue. Hystreet: siehe COMPLIANCE.md Abschnitt 6."
+    "_hinweis": "Echte Passantenfrequenzen (Fussgaenger, nicht Fahrrad) - siehe scripts/sources/fussgaenger.py fuer die rechtliche Einordnung ggue. Hystreet (Abschnitt oben). Bundesweite Recherche 2026-07 (siehe COMPLIANCE.md Abschnitt 6): Bonn/Muenster/Berlin scheiden aus, da deren 'Open Data'-Eintraege nur Verweise auf die registrierungspflichtige hystreet.com-Plattform sind (AGB verbieten gewerbliche Nutzung im Free-Tier) - keine echte Weiterveroeffentlichung durch die Stadt selbst. Braunschweig scheidet aus, da die Messung Ende 2022 eingestellt wurde (keine aktuellen Daten mehr).",
+    "regions": {
+      "oldenburg": {
+        "name": "Oldenburg (Innenstadt, ehemalige Hystreet-Sensoren)",
+        "bundesland": "Niedersachsen",
+        "source": "opendata.oldenburg.de",
+        "source_url": "https://www.govdata.de/web/guest/suche/-/details/passantenfrequenzen",
+        "license": "dl-de/by-2.0",
+        "csv_url_template": "https://opendata.oldenburg.de/sites/default/files/E1408_passantenfrequenz-oldenburg-{year}-taeglich.csv",
+        "_hinweis": "Jahresarchiv (DCAT frequency=ANNUAL) - aktuelles + Vorjahr werden bei jedem Lauf neu geladen. 4 Zaehlstellen (Achternstraße, Haarenstraße, Haarenstraße Ost, Lange Straße), taeglich seit 2020."
+      },
+      "wuerzburg": {
+        "name": "Würzburg (Innenstadt, 3 Standorte)",
+        "bundesland": "Bayern",
+        "source": "opendata.wuerzburg.de",
+        "source_url": "https://opendata.wuerzburg.de/explore/dataset/passantenzaehlung_tagesdaten/",
+        "license": "dl-de/by-2.0",
+        "csv_url": "https://opendata.wuerzburg.de/api/explore/v2.1/catalog/datasets/passantenzaehlung_tagesdaten/exports/csv?limit=-1",
+        "_hinweis": "Laserscanner (datenschutzkonform/anonym), taeglich seit 2020. Schönbornstraße (seit 04/2019), Kaiserstraße + Spiegelstraße (seit 10/2022). Lizenz bestaetigt via API-Metadaten (dl-de/by-2.0)."
+      },
+      "dortmund": {
+        "name": "Dortmund (Westenhellweg, 3 Standorte)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "open-data.dortmund.de",
+        "source_url": "https://ckan.open.nrw.de/dataset/passantenaufkommen-fussgangerzone-hellweg-2024-do",
+        "license": "dl-de/zero-2.0",
+        "csv_url_template": "https://open-data.dortmund.de/api/v2/catalog/datasets/passantenaufkommen-fussgangerzone-hellweg-{year}/exports/csv?use_labels=true",
+        "years": [2024, 2025, 2026],
+        "lat": 51.5143, "lon": 7.4629,
+        "_hinweis": "Eigene, von Radverkehr unabhaengige Zaehlung (Westenhellweg Mitte/Ost/West), stuendlich mit Richtung/Altersgruppe-Aufschluesselung seit 2018 - hier nur ab 2024 geladen (Konfiguration 'years'). Lizenz DL-Zero bestaetigt via CKAN-Metadaten. Koordinaten per Nominatim ermittelt (07/2026), alle 3 Standorte liegen auf derselben Fussgaengerzone."
+      },
+      "neuss": {
+        "name": "Neuss (Innenstadt, „Puls der Stadt“, 11 BLE-Sensoren)",
+        "bundesland": "Nordrhein-Westfalen",
+        "source": "opendata.rhein-kreis-neuss.de",
+        "source_url": "https://ckan.open.nrw.de/dataset/stadt-neuss-puls-der-stadt-ne",
+        "license": "cc-by-4.0",
+        "csv_url": "https://opendata.rhein-kreis-neuss.de/api/v2/catalog/datasets/stadt-neuss-puls-der-stadt/exports/csv?limit=-1",
+        "_hinweis": "Bluetooth-Low-Energy-Sensoren in der städtischen Beleuchtung (anonymisierte/gehashte Signale, DSGVO-konform lt. Datensatzbeschreibung), taeglich. Erst seit Juni 2026 aktiv - kurze Historie, waechst aber taeglich. Lizenz CC-BY-4.0 bestaetigt via CKAN-Metadaten. 'observations' = gezaehlte BLE-Signale, keine exakte Personenzahl."
+      },
+      "bamberg": {
+        "name": "Bamberg (Innenstadt, 26 Standorte)",
+        "bundesland": "Bayern",
+        "source": "opendata.smartcitybamberg.de",
+        "source_url": "https://open.bydata.de/datasets/passantenfrequenzmessung-innenstadt-bamberg",
+        "license": "unklar - siehe _risiko",
+        "csv_url": "https://opendata.smartcitybamberg.de/Passantenfrequenzmessung/Passantenfrequenzmessung_Innenstadt_Bamberg_Rohdaten.CSV",
+        "csv_encoding": "cp1252",
+        "_hinweis": "Projekt 'Mitte.Bamberg.2025', 26 Standorte (Sensorik von Ariadne Maps), stuendlich seit 01.10.2024. Groesste Einzelquelle im Fussgaenger-Tab.",
+        "_risiko": "KEINE explizite Standard-Open-Data-Lizenz (kein dl-de/by, keine CC) im Metadatensatz gefunden - nur die Projektbeschreibung, die Daten sollten 'allen Interessierten zur Verfuegung stehen' (deutschlandweit einmalig kommuniziert). Nutzerentscheidung 2026-07: trotzdem einbauen, Risiko hier dokumentiert. Siehe COMPLIANCE.md Abschnitt 6."
+      },
+      "augsburg": {
+        "name": "Augsburg (Annastraße)",
+        "bundesland": "Bayern",
+        "source": "augsburg.de",
+        "source_url": "https://www.augsburg.de/bildung-wirtschaft/wirtschaftsfoerderung-augsburg/einzelhandel-innenstadt-und-stadtteilentwicklung/passantenfrequenz",
+        "license": "unklar - siehe _risiko",
+        "csv_url": "https://www.augsburg.de/fileadmin/user_upload/buergerservice_rathaus/Smart_City/opendata/240429/Annastra%C3%9Fe_Frequenzdaten.csv",
+        "lat": 48.3671, "lon": 10.8950,
+        "_hinweis": "Laserzaehlung, stuendlich seit Dezember 2020, ein Standort (Annastraße).",
+        "_risiko": "KEINE explizite Standard-Open-Data-Lizenz im CSV/Metadatensatz gefunden, nur oeffentliche Bereitstellung auf staedtischer Website. Nutzerentscheidung 2026-07: trotzdem einbauen, Risiko hier dokumentiert. Siehe COMPLIANCE.md Abschnitt 6."
+      }
     }
   },
 

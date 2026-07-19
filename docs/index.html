@@ -117,8 +117,9 @@
   </div>
   <div id="fgview" hidden>
     <h2 style="font-size:15px;color:var(--accent)">Passantenfrequenzen (echte Fußgänger-Zählung)</h2>
-    <p style="font-size:13px;color:var(--muted);margin-top:4px">Laserscanner-Zählstellen in der Oldenburger Innenstadt, von der Stadt selbst offen re-publiziert (DL-DE-BY-2.0) –
-      siehe COMPLIANCE.md Abschnitt 6. Tageswerte sind stark verrauscht, daher hier nur wöchentlich/monatlich/quartalsweise aggregiert mit Vorjahresvergleich.</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">Fußgänger-Zählstellen aus 6 frei zugänglichen Städten (Oldenburg, Würzburg, Dortmund, Neuss, Bamberg, Augsburg),
+      jeweils von der Stadt selbst bzw. ihrer eigenen Sensorik erhoben und re-publiziert – siehe COMPLIANCE.md Abschnitt 6 für Details und Lizenzstatus je Stadt
+      (Bamberg/Augsburg ohne explizite Standard-Lizenz, mit dokumentiertem Restrisiko). Tageswerte sind stark verrauscht, daher hier nur wöchentlich/monatlich/quartalsweise aggregiert mit Vorjahresvergleich.</p>
     <div class="subnav" id="fgFilterbar"></div>
     <div class="gt-index" id="fgIndexCard"></div>
     <h3 style="font-size:14px;color:var(--accent);margin-top:18px">Karte</h3>
@@ -148,6 +149,12 @@ const REGION_LABEL = {
   bw:"Baden-Württemberg", hamburg:"Hamburg", leipzig:"Leipzig", muenchen:"München", nrw_muenster:"Münster (NRW)",
   nrw_dortmund:"Dortmund (NRW)", nrw_duesseldorf:"Düsseldorf (NRW)", nrw_koeln:"Köln (NRW)", rostock:"Rostock (Ostseeküste)",
 };
+const FG_REGION_COLOR = {
+  oldenburg:"#60a5fa", wuerzburg:"#fb923c", dortmund:"#38bdf8", neuss:"#f472b6", bamberg:"#c084fc", augsburg:"#6ee7a0",
+};
+const FG_REGION_LABEL = {
+  oldenburg:"Oldenburg", wuerzburg:"Würzburg", dortmund:"Dortmund", neuss:"Neuss", bamberg:"Bamberg", augsburg:"Augsburg",
+};
 const GT_SUBFREQS = [["daily","Täglich"],["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartal"]];
 const RV_SUBFREQS = [["weekly","Wöchentlich"],["monthly","Monatlich"],["quarterly","Quartal"]];
 const RV_PERIOD_WORD = {weekly:"Vorjahreswoche", monthly:"Vorjahresmonat", quarterly:"Vorjahresquartal"};
@@ -162,7 +169,6 @@ let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = 
 let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
 let rvFreq = "monthly", rvIndexCharts = [], rvStationCharts = [];
 let fgFreq = "monthly", fgIndexCharts = [], fgStationCharts = [], fgLeafletMap = null, fgMapMarkers = [];
-const FG_STATION_COLOR = ["#d7e94a", "#60a5fa", "#f472b6", "#fb923c", "#6ee7a0", "#c084fc"];
 
 function gtEnsureMinSpan(freq){
   // Weitet gtRangeFrom bei Bedarf so weit, dass die Mindestspanne fuer "freq"
@@ -384,12 +390,20 @@ function rvRegionSeriesList(){
   return Object.entries(DATA.series||{}).filter(([sid,s])=>sid.startsWith("radverkehr_region_") && (s.points||[]).length);
 }
 
+function fgRegionSeriesList(){
+  return Object.entries(DATA.series||{}).filter(([sid,s])=>sid.startsWith("fussgaenger_region_") && (s.points||[]).length);
+}
+
 // Koeln liefert nur ein Monatsarchiv 2010-2022 (siehe COMPLIANCE.md) und danach
 // nichts mehr - im Gesamt-Index sorgt das fuer einen riesigen Huegel, dann eine
 // jahrelange Luecke, dann einen Sprung, sobald die anderen (lebenden) Regionen
 // einsetzen - macht den Chart unlesbar. Koeln bleibt in der Einzelstandort-Liste
 // weiterhin sichtbar, zaehlt aber nicht in den kombinierten Gesamt-Index hinein.
 const RV_INDEX_EXCLUDED_REGIONS = new Set(["radverkehr_region_nrw_koeln"]);
+// Fussgaenger hat (Stand 07/2026) keine vergleichbare "tote" Region - leere Menge,
+// aber als eigene Konstante gefuehrt, damit ein zukuenftiger Ausschluss (analog Koeln)
+// genauso einfach eingetragen werden kann wie bei Radverkehr.
+const FG_INDEX_EXCLUDED_REGIONS = new Set([]);
 
 // Kettenindex (Basis=100, wie bei einem Aktienindex): jede Region geht nur mit ihrer
 // EIGENEN prozentualen Veraenderung von einem Bucket zum naechsten ein, nicht mit
@@ -399,10 +413,13 @@ const RV_INDEX_EXCLUDED_REGIONS = new Set(["radverkehr_region_nrw_koeln"]);
 // hinzukommende Region (unterschiedliche Startdaten je Quelle, siehe COMPLIANCE.md)
 // das Gesamtbild wie zuvor bei der reinen Summe (dort sorgte jede neu einsetzende
 // Region fuer einen Stufensprung nach oben, unabhaengig vom tatsaechlichen Trend).
-function rvChainedIndex(freq){
+// Generisch gehalten (seriesList/excluded als Parameter), damit sowohl Radverkehr
+// als auch Fussgaenger (6 Staedte seit 07/2026) dieselbe Methodik ohne Code-
+// Duplizierung verwenden.
+function chainedIndex(seriesList, excludedRegions, freq){
   const perRegion = new Map();
-  for(const [sid,s] of rvRegionSeriesList()){
-    if(RV_INDEX_EXCLUDED_REGIONS.has(sid)) continue;
+  for(const [sid,s] of seriesList){
+    if(excludedRegions.has(sid)) continue;
     // Erster Bucket einer Region faellt weg: eine Quelle startet fast nie exakt am
     // Bucket-Anfang (z.B. Hamburg: Feed begann Ende Dezember -> "Dezember" enthaelt nur
     // ein paar Tage statt des vollen Monats). Dieser Teilzeitraum waere als Wachstums-
@@ -439,6 +456,14 @@ function rvChainedIndex(freq){
     out.push([b, level]);
   }
   return out;
+}
+
+function rvChainedIndex(freq){
+  return chainedIndex(rvRegionSeriesList(), RV_INDEX_EXCLUDED_REGIONS, freq);
+}
+
+function fgChainedIndex(freq){
+  return chainedIndex(fgRegionSeriesList(), FG_INDEX_EXCLUDED_REGIONS, freq);
 }
 
 function renderRvFilterbar(){
@@ -506,9 +531,10 @@ function renderRvStations(){
   }
 }
 
-// --- Fußgänger (Oldenburg): eigener Tab, gleiche Aggregations-Helfer wie
-// Radverkehr (rvAggregateSum/rvYoY sind generisch, nur Datenquelle unterscheidet
-// sich) - nur EINE Stadt/Region, daher kein Regionen-Umweg fuer den Index noetig.
+// --- Fußgänger (6 Städte seit 07/2026): eigener Tab, gleiche Struktur/Helfer
+// wie Radverkehr (rvAggregateSum/rvYoY/chainedIndex sind generisch, nur die
+// Datenquelle unterscheidet sich) - Regionen-Umweg wie bei Radverkehr, da
+// nicht mehr nur eine Stadt.
 
 function renderFgFilterbar(){
   const bar = document.getElementById("fgFilterbar");
@@ -523,30 +549,29 @@ function renderFgFilterbar(){
 
 function renderFgIndex(){
   fgIndexCharts.forEach(c=>c.destroy()); fgIndexCharts=[];
-  const raw = (DATA.series?.fussgaenger_region_oldenburg?.points) || [];
-  const combined = rvAggregateSum(raw, fgFreq);
+  const combined = fgChainedIndex(fgFreq);
   const card = document.getElementById("fgIndexCard");
+  const nRegions = fgRegionSeriesList().filter(([sid])=>!FG_INDEX_EXCLUDED_REGIONS.has(sid)).length;
   if(!combined.length){
-    card.innerHTML = `<h3>Passantenfrequenz-Index Oldenburg</h3><div class="empty">Noch keine Daten</div>`;
+    card.innerHTML = `<h3>Passantenfrequenz-Gesamtindex (alle Städte)</h3><div class="empty">Noch keine Daten</div>`;
     return;
   }
   const {value, chg, date} = rvYoY(combined, fgFreq);
-  const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[fgFreq];
-  card.innerHTML = `<h3>Passantenfrequenz-Index Oldenburg (Summe aller Zählstellen)</h3>
-    <div><span class="kpi-val">${fmt(value,0)}</span>
-      <span style="font-size:12px;color:var(--muted)">Fußgänger / ${periodLabel}</span>
+  card.innerHTML = `<h3>Passantenfrequenz-Gesamtindex (Kettenindex aus ${nRegions} Städten, Basis 100)</h3>
+    <div><span class="kpi-val">${fmt(value,1)}</span>
+      <span style="font-size:12px;color:var(--muted)">Punkte</span>
       ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[fgFreq]}</span>`
         :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
     </div>
     <canvas height="140"></canvas>
-    <div class="hint">Stand: ${date} · Jahresarchiv - aktueller Jahrgang erscheint erst nach Jahresende (siehe COMPLIANCE.md).</div>`;
-  drawLineChart(card.querySelector("canvas"), combined, "#60a5fa", "Fußgänger", null, fgIndexCharts);
+    <div class="hint">Stand: ${date} · Kettenindex wie bei einem Aktienindex: jede Stadt geht nur mit ihrer eigenen %-Veränderung zum Vorzeitraum ein (Basis = 100 beim ersten verfügbaren Wert), nicht mit ihrem absoluten Niveau. Dadurch verzerrt weder Stadtgröße noch ein späterer Startzeitpunkt einzelner Quellen (z.B. Neuss erst seit 06/2026) das Gesamtbild.</div>`;
+  drawLineChart(card.querySelector("canvas"), combined, "#60a5fa", "Punkte", null, fgIndexCharts);
 }
 
 function renderFgMap(){
   const stations = DATA.fussgaenger_stations || {};
   if(!fgLeafletMap){
-    fgLeafletMap = L.map("fgMap").setView([53.14, 8.213], 14);
+    fgLeafletMap = L.map("fgMap").setView([51.2, 10.4], 6);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende',
       maxZoom: 18,
@@ -556,19 +581,17 @@ function renderFgMap(){
 
   const vals = Object.values(stations).map(s=>(s.points||[]).length ? s.points[s.points.length-1][1] : 0).filter(v=>v>0);
   const maxVal = vals.length ? Math.max(...vals) : 1;
-  const legendItems = [];
-  let i = 0;
+
   for(const [key,s] of Object.entries(stations)){
-    const color = FG_STATION_COLOR[i % FG_STATION_COLOR.length]; i++;
-    legendItems.push([s.name, color]);
     if(s.lat==null || s.lon==null) continue;
     const pts = s.points||[];
     const last = pts.length ? pts[pts.length-1] : null;
-    const radius = last ? 6 + 14*Math.sqrt(Math.max(last[1],0)/maxVal) : 6;
+    const color = FG_REGION_COLOR[s.region] || "#9aa3ab";
+    const radius = last ? 4 + 10*Math.sqrt(Math.max(last[1],0)/maxVal) : 4;
     const marker = L.circleMarker([s.lat,s.lon], {
       radius, color, fillColor: color, fillOpacity:.55, weight:1.5,
     }).addTo(fgLeafletMap);
-    marker.bindPopup(`<strong>${s.name}</strong><br>` +
+    marker.bindPopup(`<strong>${s.name}</strong><br>${s.bundesland||""}<br>` +
       (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})` : "Keine Werte") +
       `<br><small>Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</small>`);
     fgMapMarkers.push(marker);
@@ -576,8 +599,8 @@ function renderFgMap(){
   setTimeout(()=>fgLeafletMap.invalidateSize(), 50);
 
   const legend = document.getElementById("fgMapLegend");
-  legend.innerHTML = legendItems.map(([label,color])=>
-    `<span><span class="dot" style="background:${color}"></span>${label}</span>`).join("");
+  legend.innerHTML = Object.entries(FG_REGION_LABEL).map(([k,label])=>
+    `<span><span class="dot" style="background:${FG_REGION_COLOR[k]}"></span>${label}</span>`).join("");
 }
 
 function renderFgStations(){
@@ -587,21 +610,22 @@ function renderFgStations(){
   const entries = Object.entries(stations).sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||"","de"));
   if(!entries.length){ grid.innerHTML = `<div class="empty">Noch keine Zählstellen.</div>`; return; }
   const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[fgFreq];
-  let i = 0;
   for(const [key,s] of entries){
-    const color = FG_STATION_COLOR[i % FG_STATION_COLOR.length]; i++;
     const agg = rvAggregateSum(s.points||[], fgFreq);
+    const color = FG_REGION_COLOR[s.region] || "#9aa3ab";
+    const regionLabel = FG_REGION_LABEL[s.region] || s.region || "";
     const card = document.createElement("div"); card.className = "card";
     if(!agg.length){
-      card.innerHTML = `<h3>${s.name}</h3><div class="empty">Keine Daten</div>`;
+      card.innerHTML = `<h3>${s.name}</h3><span class="badge region" style="background:${color}22;color:${color}">${regionLabel}</span><div class="empty">Keine Daten</div>`;
       grid.appendChild(card);
       continue;
     }
     const {value, chg, date} = rvYoY(agg, fgFreq);
     const src = s.source_url ? `<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>` : s.source;
     card.innerHTML = `<h3>${s.name}</h3>
+      <span class="badge region" style="background:${color}22;color:${color}">${regionLabel}</span>
       <div><span class="kpi-val">${fmt(value,0)}</span>
-        <span style="font-size:12px;color:var(--muted)">Fußgänger / ${periodLabel}</span>
+        <span style="font-size:12px;color:var(--muted)">${s.unit||"Fußgänger"} / ${periodLabel}</span>
         ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[fgFreq]}</span>`
           :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert</span>`}
       </div>

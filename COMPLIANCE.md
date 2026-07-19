@@ -83,13 +83,48 @@ Sieben der neun stehen unter der **Datenlizenz Deutschland – Namensnennung –
 
 **Bewusst ausgeklammert: Kiel/Schleswig-Holstein.** Der Datensatz „Zählwerte Radverkehrszähler (Radzählstationen) Kiel" (Anbieter: KielRegion GmbH, Lizenz frei/Open Data, 6 Standorte, tägliche Werte) existiert in der Mobilithek (bundesweiter Mobilitätsdaten-Marktplatz) und ist inhaltlich lizenzrechtlich unkritisch. Der Zugriff erfordert aber mehr als einen persönlichen Account: Man muss als „Bestellmanager" eine **Organisation** bei der Mobilithek registrieren (Formular mit Organisationsname/-typ, Adresse, vertretungsberechtigter Person), bevor überhaupt ein „Abonnieren"-Button für das Angebot erscheint (Stand: 18.07.2026, mit registriertem Nutzeraccount geprüft, ID `995322152055894016`). Auf Nutzerentscheidung daher vorerst weiterhin nicht eingebunden. Falls die Organisation später registriert und das Abonnement freigeschaltet wird, kann Kiel als weitere Region ergänzt werden (`scripts/sources/radverkehr.py` ist dafür bewusst pro Region erweiterbar aufgebaut) – dazu wird vermutlich ein API-Key/Endpoint aus dem Mobilithek-Abonnement benötigt, der als GitHub-Secret hinterlegt würde.
 
-## 6. Passantenfrequenzen Oldenburg (`fussgaenger.py`) — ✅ unkritisch, andere rechtliche Situation als Hystreet direkt
+## 6. Passantenfrequenzen — 6 Städte (`fussgaenger.py`) — ✅ 4× unkritisch, 2× dokumentiertes Restrisiko
+
+### 6.1 Oldenburg — ✅ unkritisch, andere rechtliche Situation als Hystreet direkt
 
 Nutzeranfrage 2026-07: Nachdem festgestellt wurde, dass Norddeutschland/die Küste bei den Radverkehrsdaten unterrepräsentiert ist, wurde nach weiteren Frequenz-Quellen gesucht. Dabei aufgetaucht: Die Stadt Oldenburg lässt seit 11/2019 durch die Firma **Hystreet** (siehe Abschnitt 1) Laserscanner-Passantenzähler in ihrer Innenstadt betreiben — mittlerweile 4 Standorte (Achternstraße, Haarenstraße, Haarenstraße Ost, Lange Straße) — und veröffentlicht die eigenen Messwerte als Jahres-CSV auf ihrem eigenen Open-Data-Portal (opendata.oldenburg.de) unter der **Datenlizenz Deutschland – Namensnennung – 2.0**.
 
 **Warum das rechtlich anders zu bewerten ist als der direkte Hystreet-Zugriff (Abschnitt 1):** Hystreets eigene AGB (Ziff. 8.1.2/8.1.3) verbieten NUTZERN des Hystreet-Portals/der Hystreet-API die Veröffentlichung der über den API-Zugang bezogenen Daten ohne gesonderte Zustimmung. Hier greift dieses Projekt aber nicht auf Hystreets API zu — es lädt eine CSV-Datei, die die **Stadt Oldenburg als Auftraggeberin** der Messung auf ihrem eigenen Server unter einer eigenen, offenen Lizenz bereitstellt. Die Stadt ist in diesem Fall die Instanz, die über die Veröffentlichung ihrer eigenen erhobenen Daten entscheidet, und hat sich dafür sichtbar entschieden (eigener Open-Data-Datensatz, DCAT-Metadaten, öffentlich dokumentiert). Es gibt keinen Hinweis darauf, dass die Stadt dabei gegen einen eigenen Vertrag mit Hystreet verstößt — im Gegenteil, viele Kommunen lassen sich das Recht zur offenen Weiterveröffentlichung der eigenen Messwerte vertraglich zusichern, wenn sie einen Zähldienstleister beauftragen (vergleichbar mit dem bereits im Projekt etablierten Muster bei Eco-Counter-Zählstellen: Dortmund/Düsseldorf veröffentlichen ihre Eco-Counter-Auswertungen offen, obwohl Bochum das für seine eigenen Eco-Counter-Daten explizit untersagt — die Entscheidung liegt jeweils bei der Kommune, nicht beim Hardware-/Messdienstleister).
 
 **Einordnung:** kein Restrisiko-Fall wie ifo (Abschnitt 7) oder der direkte Hystreet-Zugriff, sondern ein regulärer offen lizenzierter Datensatz — wird daher ohne gesonderte Nutzerentscheidung eingebunden. Datenstand: Jahresarchiv (DCAT `frequency=ANNUAL`), 2020–2025 verfügbar (Stand 07/2026, 2026er-Jahrgang erscheint erst nach Jahresende), `fussgaenger.py` lädt bei jedem Lauf automatisch aktuelles + Vorjahr.
+
+### 6.2 Bundesweite Nachrecherche 2026-07 (Nutzeranfrage: „Ich brauche noch mehr Frequenzdaten")
+
+Auf ausdrücklichen Nutzerwunsch, mit möglichst vielen Städten weiterzumachen ("höre nicht auf bis du sehr viele Daten gefunden hast"), wurde eine bundesweite Recherche über die nationalen Open-Data-Kataloge (govdata.de-CKAN-API, Mobilithek, open.bydata.de) sowie einzelne Stadtportale durchgeführt. Wichtig: **Hystreets direkter API-Zugriff bleibt weiterhin ausgeschlossen** (Nutzerentscheidung, siehe Abschnitt 1) — gesucht wurde ausschließlich nach Städten, die (wie Oldenburg) ihre Passantenzahlen **selbst** unter einer offenen Lizenz re-publizieren, unabhängig von der eingesetzten Sensorik.
+
+**Neu aufgenommen — Lizenz zweifelsfrei bestätigt (via CKAN-/API-Metadaten):**
+
+| Stadt | Quelle | Lizenz | Sensorik |
+|---|---|---|---|
+| Würzburg | opendata.wuerzburg.de | dl-de/by-2.0 | eigene Laserscanner, 3 Standorte, seit 2019/2022 |
+| Dortmund | open-data.dortmund.de | dl-de/zero-2.0 | eigene Sensorik "Westenhellweg", seit 2018 (hier ab 2024 geladen) |
+| Neuss | opendata.rhein-kreis-neuss.de | CC BY 4.0 | BLE-Sensoren "Puls der Stadt", 11 Standorte, erst seit 06/2026 |
+
+**Neu aufgenommen — Nutzerentscheidung trotz fehlender expliziter Lizenz ("Einbauen, Risiko dokumentieren"):**
+
+| Stadt | Quelle | Lizenzstatus | Sensorik |
+|---|---|---|---|
+| Bamberg | opendata.smartcitybamberg.de (Projekt "Mitte.Bamberg.2025") | **keine Standard-Open-Data-Lizenz im Metadatensatz** — nur die Projektbeschreibung, die Daten sollten "allen Interessierten zur Verfügung stehen" | 26 Standorte, stündlich seit 10/2024 |
+| Augsburg | augsburg.de (städtische Website) | **keine Standard-Open-Data-Lizenz im CSV/Metadatensatz** — nur öffentliche Bereitstellung auf städtischer Website ohne Lizenzvermerk | 1 Standort (Annastraße), stündlich seit 12/2020 |
+
+Bei beiden Städten wurde die Datenlage per AskUserQuestion vorgelegt (Vorteil: größte bzw. einzige Quelle in ihrer Region/mit langer Historie; Risiko: keine explizite Lizenz, daher rein rechtlich nicht zweifelsfrei zur Weiterveröffentlichung freigegeben — anders als bei Bochum liegt aber auch **keine explizit geschlossene** Lizenz vor, die eine Weiterverbreitung ausdrücklich untersagt). **Nutzerentscheidung 2026-07: trotzdem einbauen, Risiko hier dokumentiert.** Beide Datensätze werden wie die übrigen 4 Städte nur mit extrahierten Zahlenwerten (kein Rohdatei-Hosting) und mit Quellenverweis auf die jeweilige Stadt eingebunden. Falls dieses Restrisiko nachträglich vermieden werden soll: Kontakt zur jeweiligen Stadtverwaltung (Bamberg: Projekt "Mitte.Bamberg.2025"; Augsburg: Wirtschaftsförderung/Einzelhandel-Innenstadt-Team) für eine ausdrückliche Freigabe, oder Entfernen der beiden Regionen aus `config.json → fussgaenger.regions`.
+
+**Geprüft und explizit AUSGESCHLOSSEN:**
+
+- **Bonn, Münster, Berlin**: Ihre jeweiligen "Open Data"-Kataloge listen zwar Passantenfrequenz-Datensätze, diese verweisen jedoch nur auf eine **hystreet.com-Registrierung** — die zugrunde liegenden Rohdaten werden nicht von der Stadt selbst re-publiziert, sondern bleiben auf der registrierungspflichtigen Hystreet-Plattform, deren Free-Tier-AGB gewerbliche/automatisierte Nutzung explizit untersagt (Abschnitt 1). Ein "Open Data"-Karteneintrag allein macht die zugrunde liegende Plattform nicht offen lizenziert — entscheidend ist, ob die Stadt die **Daten selbst** unter einer offenen Lizenz bereitstellt (wie bei Oldenburg/Würzburg/Dortmund/Neuss) oder nur auf einen Drittanbieter-Dienst verweist (wie hier). Nicht aufgenommen.
+- **Braunschweig**: eigene, unabhängige Zählung vorhanden, aber die Messung wurde **Ende 2022 eingestellt** — keine aktuellen Daten mehr, daher trotz einwandfreier Lizenzlage nicht aufgenommen (keine Aktualität).
+
+### 6.3 Datenformat-Besonderheiten (technisch, für zukünftige Wartung)
+
+- **Dortmund**: Der CSV-Export enthält Zeilen aufgeschlüsselt nach Richtung × Passantentyp; die Spalte "Passantenaufkommen pro Standort" wiederholt sich dabei identisch je (Standort, Messzeitpunkt) — `fussgaenger.py` dedupliziert vor der Aggregation, sonst würde massiv überzählt.
+- **Bamberg**: CSV-Encoding ist **cp1252**, nicht UTF-8 (Umlaute wären sonst verstümmelt).
+- **Neuss**: Trotz des Feldnamens `hour_start` liegt die Daten tatsächlich nur auf Tagesebene vor (max. 1 Wert pro Standort und Tag).
+- **Augsburg**: Datumsspalte enthält einen Wochentags-Präfix ("Mi., 16.12.2020"), der vor dem Parsen abgetrennt werden muss; Daten enden Stand 07/2026 bereits um Oktober 2025 (keine durchgehend aktuelle Quelle).
 
 ## 7. ifo Institut — direkte ifo-Zeitreihen (Geschäftsklima/-lage/-erwartungen) — ⚠️ Restrisiko akzeptiert
 
