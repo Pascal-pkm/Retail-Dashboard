@@ -100,6 +100,7 @@
     Wegefrequenzen und sind komplett im eigenen Reiter <strong>„Karte (Radverkehr)"</strong> zu finden – dort mit
     Gesamt-Index, Kartenansicht und allen Einzelstandorten inkl. Vorjahresvergleich.
     <em>Klick auf einen Graphen zoomt in den umliegenden Zeitraum – „Zoom zurücksetzen" oben rechts an der Karte macht das rückgängig.</em></div>
+  <div id="dailyBriefing" hidden></div>
   <div class="comments" id="comments" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="ir"></div>
@@ -169,7 +170,7 @@ const DRILL_DOWN_FREQ = {quarterly:"monthly", monthly:"weekly", weekly:"daily"};
 // 30-Tage-Spanne beim Wechsel auf "Monatlich" bei nur 1-2 Punkten haengen).
 const GT_MIN_SPAN_DAYS = {daily: 90, weekly: 180, monthly: 545, quarterly: 1095};
 
-let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
+let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [], dailyCharts = [];
 let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
 let rvFreq = "monthly", rvIndexCharts = [], rvStationCharts = [];
 let fgFreq = "monthly", fgIndexCharts = [], fgStationCharts = [], fgLeafletMap = null, fgMapMarkers = [];
@@ -283,6 +284,14 @@ function render(){
 
   const upd = DATA.meta?.updated?.[active];
   document.getElementById("meta").textContent = upd ? `Letzte Aktualisierung (${active}): ${new Date(upd).toLocaleString("de-DE")}` : "Noch kein Datenlauf für diese Frequenz.";
+
+  // Tagesübersicht ("Auf einen Blick") - nur im Täglich-Reiter, buendelt die
+  // sonst ueber Karte/Fussgaenger/Google-Trends verstreuten Tageswerte zu ein
+  // paar Kennzahlen, damit dieser Reiter nicht nur aus der Hystreet-Einzelkarte
+  // und der Trend-Kommentierung besteht (Nutzerwunsch 07/2026).
+  const briefing = document.getElementById("dailyBriefing");
+  briefing.hidden = active !== "daily";
+  if(active === "daily") renderDailyBriefing(); else { dailyCharts.forEach(c=>c.destroy()); dailyCharts=[]; }
 
   // Kommentierung
   const cbox = document.getElementById("comments");
@@ -897,6 +906,111 @@ function renderGtrends(){
     grid.appendChild(card);
     if(agg.length) drawLineChart(card.querySelector("canvas"), agg, "#60a5fa", "Index", gtOnDrillClick(agg));
   }
+}
+
+// --- Tagesübersicht ("Auf einen Blick", Nutzerwunsch 07/2026) ---------------
+// Der Taeglich-Reiter zeigte bisher praktisch nur eine einzelne Hystreet-Karte
+// plus die Google-Trends-Kommentierung, obwohl im Hintergrund taeglich >30
+// Rohserien (Radverkehr/Fussgaenger je Region, 17 Google-Trends-Suchbegriffe)
+// einlaufen - die aber wegen der Praefix-Filter oben in der generischen Karten-
+// Schleife bewusst ausgeblendet sind (Einzelkarten dafuer gehoeren in die
+// Spezial-Reiter Karte/Fussgaenger/Google Trends, sonst waere der Reiter
+// ueberladen). Diese Sektion fasst genau diese Rohdaten zu wenigen, klar
+// eingeordneten Kennzahlen zusammen, statt sie 1:1 zu duplizieren.
+
+function dailyRegionSummary(seriesList){
+  // Tagesaktuelle Summe ueber alle Regionen einer Quellenart (Radverkehr/Fussgaenger).
+  // "Heute" wird bewusst ausgeschlossen: der taegliche Cron-Lauf zieht Daten mitten
+  // am Tag, "heutige" Punkte sind also ein unvollstaendiger Teiltag und wuerden als
+  // Tagessumme einen dramatischen (aber falschen) Einbruch vortaeuschen - siehe
+  // 19.07.2026: Berlin/Dortmund/Neuss zeigten am Erhebungstag nur 10-15% ihres
+  // sonstigen Tageswerts. Referenz ist daher der letzte VOLLSTAENDIGE Tag.
+  // Danach zaehlen nur Regionen mit, deren letzter (vollstaendiger) Wert nicht
+  // mehr als 3 Tage vor dem insgesamt juengsten solchen Datum liegt - sonst
+  // wuerde eine seit Monaten/Jahren tote Region (z.B. Koeln) den Summenwert
+  // mit einem uralten Stand verfaelschen.
+  const yesterday = addDaysISO(todayISO(), -1);
+  const usable = [];
+  for(const [,s] of seriesList){
+    const pts = (s.points||[]).filter(([d])=>d<=yesterday);
+    if(pts.length) usable.push(pts);
+  }
+  if(!usable.length) return null;
+  const freshestDate = usable.map(pts=>pts[pts.length-1][0]).sort().slice(-1)[0];
+  const cutoff = addDaysISO(freshestDate, -3);
+  let sum=0, sumPrev=0, nUsed=0, nPrevUsed=0;
+  for(const pts of usable){
+    const last = pts[pts.length-1];
+    if(last[0] < cutoff) continue;
+    sum += last[1]; nUsed++;
+    const prev = pts.length>1 ? pts[pts.length-2] : null;
+    if(prev){ sumPrev += prev[1]; nPrevUsed++; }
+  }
+  const chg = (nUsed>0 && nPrevUsed===nUsed && sumPrev>0) ? (sum-sumPrev)/sumPrev*100 : null;
+  return {sum, date:freshestDate, nUsed, nTotal:usable.length, chg};
+}
+
+function dailyHealthSummary(){
+  // Ueberblick, wie viele der taeglichen Quellen (ueber alle Reiter hinweg) noch
+  // aktuelle Werte liefern - direkte Antwort auf "wie verlaesslich ist die
+  // Datenlage gerade", ohne durch Karte/Fussgaenger/Google-Trends klicken zu muessen.
+  const all = Object.entries(DATA.series||{}).filter(([,s])=>s.frequency==="daily" && (s.points||[]).length);
+  let fresh=0;
+  for(const [,s] of all){ if(!isStaleDate(s.points[s.points.length-1][0])) fresh++; }
+  return {fresh, total: all.length};
+}
+
+function dailyHeroCard(title, value, unit, chg, chgWord, dateStr, note, withChart){
+  const card = document.createElement("div"); card.className = "card";
+  card.innerHTML = `<h3>${title}</h3>
+    <div><span class="kpi-val">${value}</span>
+      <span style="font-size:12px;color:var(--muted)">${unit}</span>
+      ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ${chgWord}</span>`
+        :`<span class="kpi-chg" style="color:var(--muted)">Kein Vergleichswert</span>`}
+    </div>
+    ${withChart?`<canvas height="90"></canvas>`:""}
+    <div class="src">Stand: ${dateStr}${staleBadge(dateStr)}${note?` · ${note}`:""}</div>`;
+  if(isStaleDate(dateStr)) card.classList.add("stale-data");
+  return card;
+}
+
+function renderDailyBriefing(){
+  dailyCharts.forEach(c=>c.destroy()); dailyCharts=[];
+  const box = document.getElementById("dailyBriefing");
+  box.innerHTML = `<h2 style="font-size:15px;color:var(--accent);margin-bottom:10px">Auf einen Blick</h2>
+    <div class="grid" id="dailyHeroGrid" style="margin-bottom:16px"></div>
+    <div class="note" id="dailyHealthNote"></div>`;
+  const heroGrid = box.querySelector("#dailyHeroGrid");
+
+  // Google-Trends-Modeindex: bewusst ALLE Suchbegriffe (nicht die im Google-
+  // Trends-Reiter ggf. eingeschraenkte Auswahl), damit diese Kachel ein
+  // stabiler, von der Nutzer-Auswahl unabhaengiger Tageswert bleibt.
+  const gtAll = gtSeriesList();
+  if(gtAll.length){
+    const gtAgg = gtAggregate(gtCompositeDaily(new Set(gtAll.map(([sid])=>sid))), "daily").slice(-60);
+    if(gtAgg.length){
+      const [d,v] = gtAgg[gtAgg.length-1];
+      const chg = gtChangePct(gtAgg);
+      const card = dailyHeroCard("Google-Trends-Modeindex", fmt(v,1), `Ø Index 0–100, ${gtAll.length} Suchbegriffe`, chg, "ggü. Vortag", d, "Details im Reiter „Google Trends“", true);
+      heroGrid.appendChild(card);
+      drawLineChart(card.querySelector("canvas"), gtAgg, "#d7e94a", "Index", null, dailyCharts);
+    }
+  }
+
+  const fg = dailyRegionSummary(fgRegionSeriesList());
+  if(fg) heroGrid.appendChild(dailyHeroCard("Passantenfrequenz gesamt", fmt(fg.sum,0), `Fußgänger/Tag, ${fg.nUsed}/${fg.nTotal} Städte aktuell`, fg.chg, "ggü. Vortag", fg.date, "wetterabhängig verrauscht · Details im Reiter „Fußgänger“", false));
+
+  const rv = dailyRegionSummary(rvRegionSeriesList());
+  if(rv) heroGrid.appendChild(dailyHeroCard("Radverkehr gesamt", fmt(rv.sum,0), `Fahrräder/Tag, ${rv.nUsed}/${rv.nTotal} Regionen aktuell`, rv.chg, "ggü. Vortag", rv.date, "wetterabhängig verrauscht · Details im Reiter „Karte (Radverkehr)“", false));
+
+  if(!heroGrid.children.length) heroGrid.innerHTML = `<div class="empty">Noch keine Daten für die Tagesübersicht.</div>`;
+
+  const health = dailyHealthSummary();
+  const healthNote = box.querySelector("#dailyHealthNote");
+  healthNote.innerHTML = health.total
+    ? `<strong>Datenlage:</strong> ${health.fresh} von ${health.total} täglichen Rohserien liefern aktuelle Werte`+
+      (health.total-health.fresh>0 ? `, ${health.total-health.fresh} liefern seit ${STALE_YEAR_CUTOFF} oder früher nichts Neues mehr (⚠-Badge in den jeweiligen Reitern).` : ".")
+    : "";
 }
 
 function init(){
