@@ -51,6 +51,7 @@
   .note em{color:#fde68a}
   #mapview{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;margin-top:4px}
   #map{height:560px;border-radius:8px;margin-top:10px}
+  #fgMap{height:400px;border-radius:8px;margin-top:10px}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
   .legend span.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
   .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--text)}
@@ -110,6 +111,18 @@
     <h3 style="font-size:14px;color:var(--accent);margin-top:20px">Einzelne Zählstellen</h3>
     <div class="grid" id="rvStationGrid" style="margin-top:10px"></div>
   </div>
+  <div id="fgview" hidden>
+    <h2 style="font-size:15px;color:var(--accent)">Passantenfrequenzen (echte Fußgänger-Zählung)</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">Laserscanner-Zählstellen in der Oldenburger Innenstadt, von der Stadt selbst offen re-publiziert (DL-DE-BY-2.0) –
+      siehe COMPLIANCE.md Abschnitt 6. Tageswerte sind stark verrauscht, daher hier nur wöchentlich/monatlich/quartalsweise aggregiert mit Vorjahresvergleich.</p>
+    <div class="subnav" id="fgFilterbar"></div>
+    <div class="gt-index" id="fgIndexCard"></div>
+    <h3 style="font-size:14px;color:var(--accent);margin-top:18px">Karte</h3>
+    <div id="fgMap"></div>
+    <div class="legend" id="fgMapLegend"></div>
+    <h3 style="font-size:14px;color:var(--accent);margin-top:20px">Einzelne Zählstellen</h3>
+    <div class="grid" id="fgStationGrid" style="margin-top:10px"></div>
+  </div>
   <div id="gtrendsview" hidden>
     <h2 style="font-size:15px;color:var(--accent)">Google Trends – Suchinteresse Mode &amp; Einzelhandel</h2>
     <div class="gt-index" id="gtIndexCard"></div>
@@ -144,6 +157,8 @@ const GT_MIN_SPAN_DAYS = {daily: 90, weekly: 180, monthly: 545, quarterly: 1095}
 let DATA = null, active = "daily", charts = [], leafletMap = null, mapMarkers = [];
 let gtFreq = "daily", gtChecked = null, gtRangeFrom = null, gtRangeTo = null, gtRangeInit = false;
 let rvFreq = "monthly", rvIndexCharts = [], rvStationCharts = [];
+let fgFreq = "monthly", fgIndexCharts = [], fgStationCharts = [], fgLeafletMap = null, fgMapMarkers = [];
+const FG_STATION_COLOR = ["#d7e94a", "#60a5fa", "#f472b6", "#fb923c", "#6ee7a0", "#c084fc"];
 
 function gtEnsureMinSpan(freq){
   // Weitet gtRangeFrom bei Bedarf so weit, dass die Mindestspanne fuer "freq"
@@ -196,19 +211,29 @@ function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.f===active));
 
   const isMap = active === "map";
+  const isFg = active === "fussgaenger";
   const isGt = active === "gtrends";
   document.getElementById("mapview").hidden = !isMap;
+  document.getElementById("fgview").hidden = !isFg;
   document.getElementById("gtrendsview").hidden = !isGt;
-  document.getElementById("grid").hidden = isMap || isGt;
-  document.getElementById("comments").hidden = isMap || isGt || !(DATA.commentary?.[active]?.items || []).length;
-  document.getElementById("ir").hidden = isMap || isGt;
-  document.getElementById("errors").hidden = isMap || isGt || !(DATA.errors?.[active]||[]).length;
+  document.getElementById("grid").hidden = isMap || isFg || isGt;
+  document.getElementById("comments").hidden = isMap || isFg || isGt || !(DATA.commentary?.[active]?.items || []).length;
+  document.getElementById("ir").hidden = isMap || isFg || isGt;
+  document.getElementById("errors").hidden = isMap || isFg || isGt || !(DATA.errors?.[active]||[]).length;
   if(isMap){
     document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.radverkehr_stations||{}).length} · Datenstand je Region siehe Popup`;
     renderRvFilterbar();
     renderRvIndex();
     renderMap();
     renderRvStations();
+    return;
+  }
+  if(isFg){
+    document.getElementById("meta").textContent = `Zählstellen insgesamt: ${Object.keys(DATA.fussgaenger_stations||{}).length} · Datenstand siehe Popup`;
+    renderFgFilterbar();
+    renderFgIndex();
+    renderFgMap();
+    renderFgStations();
     return;
   }
   if(isGt){
@@ -229,7 +254,7 @@ function render(){
 
   // Serien
   const grid = document.getElementById("grid"); grid.innerHTML="";
-  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_") && !sid.startsWith("radverkehr_region_"));
+  const series = Object.entries(DATA.series||{}).filter(([sid,s])=>s.frequency===active && (s.points||[]).length && !sid.startsWith("gtrends_") && !sid.startsWith("radverkehr_region_") && !sid.startsWith("fussgaenger_region_"));
   if(!series.length) grid.innerHTML = `<div class="empty">Noch keine Daten – der erste Cron-Lauf füllt dieses Panel.</div>`;
   series.sort((a,b)=>a[1].label.localeCompare(b[1].label,"de"));
   for(const [sid,s] of series){
@@ -422,6 +447,112 @@ function renderRvStations(){
       <div class="src">Stand: ${date}${src?` · Quelle: ${src}`:""}</div>`;
     grid.appendChild(card);
     drawLineChart(card.querySelector("canvas"), agg, color, s.unit, null, rvStationCharts);
+  }
+}
+
+// --- Fußgänger (Oldenburg): eigener Tab, gleiche Aggregations-Helfer wie
+// Radverkehr (rvAggregateSum/rvYoY sind generisch, nur Datenquelle unterscheidet
+// sich) - nur EINE Stadt/Region, daher kein Regionen-Umweg fuer den Index noetig.
+
+function renderFgFilterbar(){
+  const bar = document.getElementById("fgFilterbar");
+  bar.innerHTML = "";
+  for(const [f,label] of RV_SUBFREQS){
+    const b = document.createElement("button"); b.textContent = label;
+    b.className = f===fgFreq ? "active" : "";
+    b.onclick = () => { fgFreq = f; renderFgIndex(); renderFgStations(); };
+    bar.appendChild(b);
+  }
+}
+
+function renderFgIndex(){
+  fgIndexCharts.forEach(c=>c.destroy()); fgIndexCharts=[];
+  const raw = (DATA.series?.fussgaenger_region_oldenburg?.points) || [];
+  const combined = rvAggregateSum(raw, fgFreq);
+  const card = document.getElementById("fgIndexCard");
+  if(!combined.length){
+    card.innerHTML = `<h3>Passantenfrequenz-Index Oldenburg</h3><div class="empty">Noch keine Daten</div>`;
+    return;
+  }
+  const {value, chg, date} = rvYoY(combined, fgFreq);
+  const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[fgFreq];
+  card.innerHTML = `<h3>Passantenfrequenz-Index Oldenburg (Summe aller Zählstellen)</h3>
+    <div><span class="kpi-val">${fmt(value,0)}</span>
+      <span style="font-size:12px;color:var(--muted)">Fußgänger / ${periodLabel}</span>
+      ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[fgFreq]}</span>`
+        :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert verfügbar</span>`}
+    </div>
+    <canvas height="140"></canvas>
+    <div class="hint">Stand: ${date} · Jahresarchiv - aktueller Jahrgang erscheint erst nach Jahresende (siehe COMPLIANCE.md).</div>`;
+  drawLineChart(card.querySelector("canvas"), combined, "#60a5fa", "Fußgänger", null, fgIndexCharts);
+}
+
+function renderFgMap(){
+  const stations = DATA.fussgaenger_stations || {};
+  if(!fgLeafletMap){
+    fgLeafletMap = L.map("fgMap").setView([53.14, 8.213], 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende',
+      maxZoom: 18,
+    }).addTo(fgLeafletMap);
+  }
+  fgMapMarkers.forEach(m=>fgLeafletMap.removeLayer(m)); fgMapMarkers=[];
+
+  const vals = Object.values(stations).map(s=>(s.points||[]).length ? s.points[s.points.length-1][1] : 0).filter(v=>v>0);
+  const maxVal = vals.length ? Math.max(...vals) : 1;
+  const legendItems = [];
+  let i = 0;
+  for(const [key,s] of Object.entries(stations)){
+    const color = FG_STATION_COLOR[i % FG_STATION_COLOR.length]; i++;
+    legendItems.push([s.name, color]);
+    if(s.lat==null || s.lon==null) continue;
+    const pts = s.points||[];
+    const last = pts.length ? pts[pts.length-1] : null;
+    const radius = last ? 6 + 14*Math.sqrt(Math.max(last[1],0)/maxVal) : 6;
+    const marker = L.circleMarker([s.lat,s.lon], {
+      radius, color, fillColor: color, fillOpacity:.55, weight:1.5,
+    }).addTo(fgLeafletMap);
+    marker.bindPopup(`<strong>${s.name}</strong><br>` +
+      (last ? `Letzter Wert: ${fmt(last[1],0)} ${s.unit||""} (${last[0]})` : "Keine Werte") +
+      `<br><small>Quelle: ${s.source_url?`<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>`:s.source}</small>`);
+    fgMapMarkers.push(marker);
+  }
+  setTimeout(()=>fgLeafletMap.invalidateSize(), 50);
+
+  const legend = document.getElementById("fgMapLegend");
+  legend.innerHTML = legendItems.map(([label,color])=>
+    `<span><span class="dot" style="background:${color}"></span>${label}</span>`).join("");
+}
+
+function renderFgStations(){
+  fgStationCharts.forEach(c=>c.destroy()); fgStationCharts=[];
+  const stations = DATA.fussgaenger_stations || {};
+  const grid = document.getElementById("fgStationGrid"); grid.innerHTML = "";
+  const entries = Object.entries(stations).sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||"","de"));
+  if(!entries.length){ grid.innerHTML = `<div class="empty">Noch keine Zählstellen.</div>`; return; }
+  const periodLabel = {weekly:"Woche", monthly:"Monat", quarterly:"Quartal"}[fgFreq];
+  let i = 0;
+  for(const [key,s] of entries){
+    const color = FG_STATION_COLOR[i % FG_STATION_COLOR.length]; i++;
+    const agg = rvAggregateSum(s.points||[], fgFreq);
+    const card = document.createElement("div"); card.className = "card";
+    if(!agg.length){
+      card.innerHTML = `<h3>${s.name}</h3><div class="empty">Keine Daten</div>`;
+      grid.appendChild(card);
+      continue;
+    }
+    const {value, chg, date} = rvYoY(agg, fgFreq);
+    const src = s.source_url ? `<a href="${s.source_url}" target="_blank" rel="noopener">${s.source}</a>` : s.source;
+    card.innerHTML = `<h3>${s.name}</h3>
+      <div><span class="kpi-val">${fmt(value,0)}</span>
+        <span style="font-size:12px;color:var(--muted)">Fußgänger / ${periodLabel}</span>
+        ${chg!=null?`<span class="kpi-chg ${chg>=0?"up":"down"}">${chg>=0?"▲":"▼"} ${fmt(Math.abs(chg))} % ggü. ${RV_PERIOD_WORD[fgFreq]}</span>`
+          :`<span class="kpi-chg" style="color:var(--muted)">Kein Vorjahreswert</span>`}
+      </div>
+      <canvas height="90"></canvas>
+      <div class="src">Stand: ${date}${src?` · Quelle: ${src}`:""}</div>`;
+    grid.appendChild(card);
+    drawLineChart(card.querySelector("canvas"), agg, color, s.unit, null, fgStationCharts);
   }
 }
 
@@ -667,6 +798,9 @@ function init(){
   const mapBtn=document.createElement("button"); mapBtn.textContent="Karte (Radverkehr)"; mapBtn.dataset.f="map";
   mapBtn.onclick=()=>{active="map";render();};
   nav.appendChild(mapBtn);
+  const fgBtn=document.createElement("button"); fgBtn.textContent="Fußgänger"; fgBtn.dataset.f="fussgaenger";
+  fgBtn.onclick=()=>{active="fussgaenger";render();};
+  nav.appendChild(fgBtn);
   const gtBtn=document.createElement("button"); gtBtn.textContent="Google Trends"; gtBtn.dataset.f="gtrends";
   gtBtn.onclick=()=>{active="gtrends";render();};
   nav.appendChild(gtBtn);

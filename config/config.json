@@ -130,6 +130,18 @@
     }
   },
 
+  "fussgaenger": {
+    "_hinweis": "Echte Passantenfrequenzen (Fussgaenger, nicht Fahrrad) - siehe scripts/sources/fussgaenger.py fuer die rechtliche Einordnung ggue. Hystreet (Abschnitt oben). Aktuell nur Oldenburg; weitere Staedte koennten spaeter ergaenzt werden, falls sie ihre Hystreet- oder aehnliche Sensordaten ebenfalls selbst offen re-publizieren.",
+    "oldenburg": {
+      "name": "Oldenburg (Innenstadt, ehemalige Hystreet-Sensoren)",
+      "source": "opendata.oldenburg.de",
+      "source_url": "https://www.govdata.de/web/guest/suche/-/details/passantenfrequenzen",
+      "license": "dl-de/by-2.0",
+      "csv_url_template": "https://opendata.oldenburg.de/sites/default/files/E1408_passantenfrequenz-oldenburg-{year}-taeglich.csv",
+      "_hinweis": "Jahresarchiv (DCAT frequency=ANNUAL) - aktuelles + Vorjahr werden bei jedem Lauf neu geladen. 4 Zaehlstellen (Achternstraße, Haarenstraße, Haarenstraße Ost, Lange Straße), taeglich seit 2020. Rechtliche Einordnung ggue. Hystreet: siehe COMPLIANCE.md Abschnitt 6."
+    }
+  },
+
   "google_trends": {
     "geo": "DE",
     "timeframe": "today 3-m",

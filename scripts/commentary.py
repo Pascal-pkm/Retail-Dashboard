@@ -22,6 +22,11 @@ def generate(data, freq, config):
     for sid, s in sorted(data.get("series", {}).items()):
         if s.get("frequency") != freq or len(s.get("points", [])) < 2:
             continue
+        if sid.startswith("radverkehr_region_") or sid.startswith("fussgaenger_region_"):
+            # Landen ausschliesslich im eigenen Karte-/Fussgaenger-Tab (siehe
+            # docs/index.html), nicht mehr in der normalen Kommentierung - sonst
+            # taucht dort eine Kennzahl auf, die auf diesem Tab gar nicht sichtbar ist.
+            continue
         if "normalisiert" in s.get("unit", ""):
             # %-Veraenderung normalisierter Indizes ist nicht aussagekraeftig;
             # dafuer liefern die Dashboard-Widgets fertige Aussagen
