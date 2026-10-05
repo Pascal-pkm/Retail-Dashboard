@@ -72,20 +72,8 @@
    ]
   },
   "monthly": {
-   "generated": "2026-09-05T07:27:40+00:00",
+   "generated": "2026-10-05T16:08:02+00:00",
    "items": [
-    {
-     "change_pct": -6.55,
-     "date": "2026-07-01",
-     "series": "eurostat_g477_de",
-     "text": "▼ Umsatzvolumen EH Textilien/Bekleidung/Schuhe (G47.7) – Deutschland: 6,6 % ggü. Vormonat gesunken."
-    },
-    {
-     "change_pct": -3.44,
-     "date": "2026-07-01",
-     "series": "eurostat_g47_de",
-     "text": "▼ Umsatzvolumen Einzelhandel gesamt – Deutschland: 3,4 % ggü. Vormonat gesunken."
-    },
     {
      "change_pct": 0.0,
      "date": null,
@@ -277,12 +265,12 @@
    {
     "message": "Unerwartetes ffcsv-Format, Spalten: ['<!doctype html>'] (erste 200 Zeichen der Antwort: '<!doctype html>\\n<html lang=\"de\">\\n  <head>\\n    <meta charset=\"utf-8\" />\\n    <meta name=\"viewport\" content=\"width=device-width, user-scalable=yes\" />\\n    <meta name=\"theme-color\" content=\"#000000\" />\\n  ')",
     "source": "genesis",
-    "time": "2026-09-05T07:27:40+00:00"
+    "time": "2026-10-05T16:08:02+00:00"
    },
    {
     "message": "ifo-Geschäftsklima-XLSX-Link nicht gefunden (Seitenstruktur geändert?)",
     "source": "ifo",
-    "time": "2026-09-05T07:27:40+00:00"
+    "time": "2026-10-05T16:08:02+00:00"
    }
   ],
   "quarterly": [
@@ -139669,7 +139657,7 @@
   "updated": {
    "daily": "2026-10-05T12:25:27+00:00",
    "hystreet_manual": "2026-07-18T18:27:39+00:00",
-   "monthly": "2026-09-05T07:27:40+00:00",
+   "monthly": "2026-10-05T16:08:02+00:00",
    "quarterly": "2026-08-20T10:00:50+00:00",
    "weekly": "2026-10-05T14:50:27+00:00"
   }
@@ -331108,15 +331096,15 @@
     ],
     [
      "2026-01-01",
-     110.8
+     111.0
     ],
     [
      "2026-02-01",
-     110.7
+     110.8
     ],
     [
      "2026-03-01",
-     111.1
+     111.3
     ],
     [
      "2026-04-01",
@@ -331124,15 +331112,19 @@
     ],
     [
      "2026-05-01",
-     110.3
+     110.2
     ],
     [
      "2026-06-01",
-     109.9
+     110.1
     ],
     [
      "2026-07-01",
-     102.7
+     104.2
+    ],
+    [
+     "2026-08-01",
+     105.3
     ]
    ],
    "scope": "branche",
@@ -331856,7 +331848,7 @@
     ],
     [
      "2026-01-01",
-     101.3
+     101.4
     ],
     [
      "2026-02-01",
@@ -331872,15 +331864,19 @@
     ],
     [
      "2026-05-01",
-     101.8
+     101.7
     ],
     [
      "2026-06-01",
-     101.8
+     101.9
     ],
     [
      "2026-07-01",
-     98.3
+     98.6
+    ],
+    [
+     "2026-08-01",
+     99.9
     ]
    ],
    "scope": "branche",
