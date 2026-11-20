@@ -83,7 +83,7 @@
    ]
   },
   "quarterly": {
-   "generated": "2026-08-20T10:00:50+00:00",
+   "generated": "2026-11-20T16:59:41+00:00",
    "items": [
     {
      "change_pct": -1216.67,
@@ -268,12 +268,7 @@
    {
     "message": "Inditex: kein PDF-Link (JS-Seite?) - nur IR-Link gespeichert",
     "source": "ir_reports",
-    "time": "2026-08-20T10:00:50+00:00"
-   },
-   {
-    "message": "H&M Group: PDF gefunden, aber keine KPIs per Regex extrahiert (https://hmgroup.com/wp-content/uploads/2026/06/Q2-2026-report-PPT_final.pdf)",
-    "source": "ir_reports",
-    "time": "2026-08-20T10:00:50+00:00"
+    "time": "2026-11-20T16:59:41+00:00"
    }
   ],
   "weekly": []
@@ -160374,28 +160369,30 @@
  },
  "ir_reports": {
   "hm": {
-   "checked": "2026-08-20T10:00:50+00:00",
+   "checked": "2026-11-20T16:59:40+00:00",
    "ir_url": "https://hmgroup.com/investors/reports/",
-   "kpis": {},
+   "kpis": {
+    "Nettoumsatz (Mrd. SEK)": 57.189
+   },
    "name": "H&M Group",
-   "quarter": "2026-Q2",
-   "report_url": "https://hmgroup.com/wp-content/uploads/2026/06/Q2-2026-report-PPT_final.pdf",
+   "quarter": "2026-Q3",
+   "report_url": "https://hmgroup.com/wp-content/uploads/2026/09/H-M-Hennes-Mauritz-AB-Nine-month-report-2026.pdf",
    "scope": "konzern"
   },
   "inditex": {
-   "checked": "2026-08-20T10:00:49+00:00",
+   "checked": "2026-11-20T16:59:40+00:00",
    "ir_url": "https://www.inditex.com/itxcomweb/en/investors/investor-relations/quarterly-results",
    "name": "Inditex",
-   "quarter": "2026-Q2",
+   "quarter": "2026-Q3",
    "report_url": "https://www.inditex.com/itxcomweb/en/investors/investor-relations/quarterly-results",
    "scope": "konzern"
   },
   "zalando": {
-   "checked": "2026-08-20T10:00:47+00:00",
+   "checked": "2026-11-20T16:59:38+00:00",
    "ir_url": "https://corporate.zalando.com/en/investor-relations/financial-reporting",
    "name": "Zalando SE (inkl. About You seit Übernahme 2025)",
    "quarter": "2026-Q1",
-   "report_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_ec-presentation.pdf",
+   "report_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_ec-presentation.pdf?VersionId=Sq9qoL9Ie9oaL.4tDaqhy.jrqX1OtzgQ",
    "scope": "konzern"
   }
  },
@@ -160405,7 +160402,7 @@
    "daily": "2026-11-20T14:15:05+00:00",
    "hystreet_manual": "2026-07-18T18:27:39+00:00",
    "monthly": "2026-11-05T15:33:45+00:00",
-   "quarterly": "2026-08-20T10:00:50+00:00",
+   "quarterly": "2026-11-20T16:59:41+00:00",
    "weekly": "2026-11-16T15:56:32+00:00"
   }
  },
@@ -466844,6 +466841,20 @@
    "source_url": "https://www.ifo.de/ifo-zeitreihen",
    "unit": "Punkte (2015=100, saisonbereinigt)"
   },
+  "ir_hm_nettoumsatz__mrd__sek_": {
+   "frequency": "quarterly",
+   "label": "H&M Group: Nettoumsatz (Mrd. SEK)",
+   "points": [
+    [
+     "2026-09-30",
+     57.189
+    ]
+   ],
+   "scope": "konzern",
+   "source": "H&M Group Investor Relations (Quartalsbericht)",
+   "source_url": "https://hmgroup.com/wp-content/uploads/2026/09/H-M-Hennes-Mauritz-AB-Nine-month-report-2026.pdf",
+   "unit": "Mrd. SEK"
+  },
   "ir_zalando_active_customers_ltm_m": {
    "frequency": "quarterly",
    "label": "Zalando SE (inkl. About You seit Übernahme 2025): Active customers LTM (m)",
@@ -466951,7 +466962,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "m"
   },
   "ir_zalando_adjusted_ebit_in_m_eur": {
@@ -467061,7 +467072,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_adjusted_ebit_in_m_eur_b2b": {
@@ -467123,7 +467134,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_adjusted_ebit_in_m_eur_b2c": {
@@ -467185,7 +467196,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_adjusted_ebit_in_m_eur_reconciliation": {
@@ -467247,7 +467258,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_adjusted_ebit_margin": {
@@ -467357,7 +467368,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_adjusted_ebit_margin_in": {
@@ -467419,7 +467430,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_adjusted_ebit_margin_in_b2b": {
@@ -467481,7 +467492,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_adjusted_ebit_margin_in_b2c": {
@@ -467543,7 +467554,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_average_basket_size_ltm_in_eur": {
@@ -467653,7 +467664,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "in EUR"
   },
   "ir_zalando_average_gmv_per_active_customer_ltm_in_eur": {
@@ -467763,7 +467774,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "in EUR"
   },
   "ir_zalando_average_order_per_active_customer_ltm": {
@@ -467873,7 +467884,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_basic_earnings_per_share_in_eur": {
@@ -467983,7 +467994,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "in EUR"
   },
   "ir_zalando_capex": {
@@ -468093,7 +468104,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_cash_and_cash_equivalents_at_the_end_of_the_period": {
@@ -468203,7 +468214,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_cash_flow_from_investing_activities": {
@@ -468313,7 +468324,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_cash_flow_from_operating_activities": {
@@ -468423,7 +468434,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_ebit_in_m_eur": {
@@ -468533,7 +468544,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_ebit_in_m_eur_b2b": {
@@ -468595,7 +468606,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_ebit_in_m_eur_b2c": {
@@ -468657,7 +468668,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_ebit_in_m_eur_reconciliation": {
@@ -468719,7 +468730,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_ebit_margin": {
@@ -468829,7 +468840,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_ebit_margin_in": {
@@ -468891,7 +468902,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_ebit_margin_in_b2b": {
@@ -468953,7 +468964,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_ebit_margin_in_b2c": {
@@ -469015,7 +469026,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "%"
   },
   "ir_zalando_free_cash_flow": {
@@ -469125,7 +469136,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_gross_merchandise_volume_gmv_in_m_eur": {
@@ -469235,7 +469246,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_net_working_capital": {
@@ -469345,7 +469356,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_number_of_employees_as_of_reporting_date": {
@@ -469455,7 +469466,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": ""
   },
   "ir_zalando_number_of_orders_m": {
@@ -469565,7 +469576,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 1_Group key figures)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "m"
   },
   "ir_zalando_revenue_in_m_eur": {
@@ -469675,7 +469686,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_revenue_in_m_eur_b2b": {
@@ -469737,7 +469748,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_revenue_in_m_eur_b2c": {
@@ -469799,7 +469810,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "ir_zalando_revenue_in_m_eur_reconciliation": {
@@ -469861,7 +469872,7 @@
    ],
    "scope": "konzern",
    "source": "Zalando SE (inkl. About You seit Übernahme 2025) Investor Relations (Financials XLS, 4_Segment performance)",
-   "source_url": "https://corporate.zalando.com/sites/default/files/media-download/zalando-se_q1-2026_financials_xls.xlsx",
+   "source_url": "https://corporate.zalando.com/public/media-download/zalando-se_q1-2026_financials_xls.xlsx?VersionId=pSucfLMtucS3OS3Rr.8IZEZ5HuMG6p3e",
    "unit": "Mio. EUR"
   },
   "radverkehr_region_bw": {
